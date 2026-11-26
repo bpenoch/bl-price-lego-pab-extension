@@ -117,6 +117,13 @@ api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const sites = msg.sites || Object.keys(settings.sites).filter((s) => settings.sites[s]);
         return { started: await syncSites(sites, true) };
       }
+      case 'fetchText': {   // 代 BrickLink 頁面抓文字（例如顏色表），背景程式不受網頁的跨網域限制
+        if (!/^https:\/\/([a-z0-9-]+\.)*bricklink\.com\//i.test(msg.url || '')) return { error: 'bad url' };
+        try {
+          const r = await fetch(msg.url, { credentials: 'include' });
+          return { ok: r.ok, status: r.status, url: r.url, text: await r.text() };
+        } catch (e) { return { error: String((e && e.message) || e) }; }
+      }
       case 'ensureFresh': {
         updateFx();
         const settings = await getSettings();

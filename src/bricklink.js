@@ -33,7 +33,7 @@
   }
   const names = (arr, n = 5) => { arr = [...new Set(arr)]; return esc(arr.slice(0, n).join(BLPAB_LANG === 'zh' ? '、' : ', ')) + (arr.length > n ? t('moreColours', { n: arr.length - n }) : ''); };
   const L = (e) => BLPAB.colourLabel(e);   // 顯示用顏色名：BrickLink 名稱優先
-  const priceLink = (e) => `<a class="blpab-price" href="${BLPAB.pabUrl(e.site, e.eid)}" target="_blank" rel="noopener" title="${esc(t('openOnLego', { id: e.eid }))}">${esc(BLPAB.money(e.price, e.currency))}</a>`;
+  const priceLink = (e, extra) => `<a class="blpab-price" href="${BLPAB.pabUrl(e.site, e.eid)}" target="_blank" rel="noopener" title="${esc((extra ? extra + '\n' : '') + t('openOnLego', { id: e.eid }))}">${esc(BLPAB.money(e.price, e.currency))}</a>`;
   function swatch(lego) {
     const hex = BLPAB.maps.hex[lego];
     return `<span class="blpab-sw" style="${hex ? 'background:' + hex : ''}"></span>`;
@@ -78,7 +78,7 @@
       const tag = `<span class="blpab-tag ${limCls(q)}">${t('limit', { n: q })}</span>`;
       sub.push(lim.size === 1 && ns.length === av.length ? `${tag} ${t('all')}` : grp(tag, ns));
     }
-    if (oos.length) sub.push(`<span class="blpab-bad">${t('outOfStock')}</span> ${names(oos.map(L), 3)}`);
+    if (oos.length) sub.push(`<span class="blpab-bad">${t('oosCount', { n: oos.length })}</span> ${names(oos.map(L), 3)}`);
     return `<div class="blpab-line">${head}${C()}${txt}<div class="blpab-sub">${sub.join('<span class="blpab-dot">·</span>')}</div></div>`;
   }
 
@@ -209,7 +209,7 @@
       const fxTip = site === 'NL' && nlUsd != null ? '\n' + t('fxTip', { date: BLPAB.fx.date }) + `（1€ = $${BLPAB.fx.rate.toFixed(3)}）` : '';
       const lim = e.maxQty ? '\n' + t('tipLimit', { n: e.maxQty }) : '';
       const side = [site === 'NL' && nlUsd != null ? `≈$${nlUsd.toFixed(2)}` : '', e.maxQty && e.maxQty < 50 ? limTag(e) : ''].filter(Boolean).join(' ');
-      return row(site, label, priceLink(e), side, ship + lim + fxTip);
+      return row(site, label, priceLink(e, ship + lim + fxTip), side, ship + lim + fxTip);
     };
     let blRow;
     if (!pg) blRow = row('BL', t('srcBL'), `<span class="blpab-na">${t('pgWait')}</span>`);
@@ -250,7 +250,7 @@
       if (map) { ev.preventDefault(); openMapEditor(map); return; }
       const a = ev.target.closest('[data-act]'); if (!a) return;
       const act = a.dataset.act;
-      if (act === 'min') { panel.classList.toggle('blpab-min'); if (!narrow()) ls.set('min', panel.classList.contains('blpab-min') ? '1' : '0'); clampPanel(); }
+      if (act === 'min') { panel.classList.toggle('blpab-min'); if (!narrow()) ls.set('min', panel.classList.contains('blpab-min') ? '1' : '0'); clampPanel(); requestAnimationFrame(clampPanel); }
       if (act === 'sync') blpabApi.runtime.sendMessage({ type: 'sync' }).catch(() => {});
       if (act === 'expand') { expanded = !expanded; renderPanel(); }
     });
@@ -286,7 +286,9 @@
   function setPosFromRect(left, top, w, h) {
     const { vh } = viewport();
     const right = window.innerWidth - (left + w);
-    pos = top + h / 2 > vh / 2 ? { r: right, v: vh - (top + h), a: 'b' } : { r: right, v: top, a: 't' };
+    const { vw } = viewport();
+    const v = top + h / 2 > vh / 2 ? { v: vh - (top + h), a: 'b' } : { v: top, a: 't' };
+    pos = left + w / 2 < vw / 2 ? { h: 'l', r: left, ...v } : { h: 'r', r: right, ...v };   // r = 離左邊或右邊的距離
     clampPanel();
   }
   function clampPanel() {
@@ -294,13 +296,17 @@
     const { vw, vh } = viewport();
     const sb = window.innerWidth - vw;                          // 捲軸寬度
     const w = panel.getBoundingClientRect().width;
-    pos.r = Math.max(sb + 4, Math.min(pos.r, window.innerWidth - Math.min(w, vw - 8) - 4));
     pos.v = Math.max(4, Math.min(pos.v, vh - 60));
-    panel.style.left = 'auto';
-    panel.style.right = pos.r + 'px';
+    if (pos.h === 'l') {
+      pos.r = Math.max(4, Math.min(pos.r, vw - Math.min(w, vw - 8) - 4));
+      panel.style.right = 'auto'; panel.style.left = pos.r + 'px';
+    } else {
+      pos.r = Math.max(sb + 4, Math.min(pos.r, window.innerWidth - Math.min(w, vw - 8) - 4));
+      panel.style.left = 'auto'; panel.style.right = pos.r + 'px';
+    }
     if (pos.a === 'b') { panel.style.bottom = pos.v + 'px'; panel.style.top = 'auto'; }
     else { panel.style.top = pos.v + 'px'; panel.style.bottom = 'auto'; }
-    panel.style.maxHeight = Math.max(120, vh - pos.v - 16) + 'px';
+    panel.style.maxHeight = Math.max(120, Math.min(vh - pos.v - 16, vh - 110)) + 'px';
   }
 
   // 「設定對照」：在面板裡選 BrickLink 顏色（或輸入編號），不用瀏覽器原生輸入框
@@ -314,26 +320,39 @@
     const lego = link.dataset.lego, name = link.dataset.name;
     const box = document.createElement('span');
     box.className = 'blpab-mapedit';
-    const st = BLPAB.blColors ? t('blListOk', { n: BLPAB.blColors.list.length }) : BLPAB.blColorsStatus && !BLPAB.blColorsStatus.ok ? t('blListFail', { e: BLPAB.blColorsStatus.reason }) : t('blListNone');
+    const st = BLPAB.blColors ? t('blListOk', { n: BLPAB.blColors.list.length }) : BLPAB.blColorsStatus && !BLPAB.blColorsStatus.ok ? t('blListFail', { e: String(BLPAB.blColorsStatus.reason).replace(/Failed to fetch/g, t('netErr')) }) : t('blListNone');
     box.innerHTML = `<input type="search" class="blpab-mapsearch" placeholder="${esc(t('mapSearch'))}"><select><option value="">${esc(t('mapPick'))}</option>${blColourOptions().map(([id, n]) => `<option value="${id}">${esc(n)} (${id})</option>`).join('')}</select>
       <span class="blpab-maprow"><input type="number" min="1" placeholder="${esc(t('mapOther'))}"><button type="button" data-m="save">${t('mapSave')}</button><button type="button" data-m="cancel">${t('mapCancel')}</button></span>
-      <small class="blpab-muted blpab-mapstatus">${esc(st)}</small>`;
-    link.replaceWith(box);
+      <small class="blpab-muted blpab-mapstatus">${esc(st)}${BLPAB.blColors ? '' : ` <a href="#" data-m="reload">${t('retry')}</a>`}</small>`;
+    // 放在顏色表這一列下面，獨立一整列（不擠在顏色名那欄，不會出現橫向捲軸）
+    const tr = link.closest('tr');
+    let holder = null;
+    if (tr && tr.parentElement) {
+      holder = document.createElement('tr');
+      holder.className = 'blpab-maptr';
+      holder.innerHTML = `<td colspan="${tr.children.length}"></td>`;
+      holder.firstChild.appendChild(box);
+      tr.after(holder);
+      link.style.display = 'none';
+    } else link.replaceWith(box);
+    const close = () => { if (holder) { holder.remove(); link.style.display = ''; } else box.replaceWith(link); };
     const sel = box.querySelector('select'), inp = box.querySelector('input[type=number]'), q = box.querySelector('.blpab-mapsearch');
     sel.addEventListener('change', () => { if (sel.value) inp.value = sel.value; });
     q.addEventListener('input', () => {   // 輸入字或編號篩選選單
       const k = q.value.trim().toLowerCase();
       const shown = [];
       for (const o of sel.options) if (o.value) { o.hidden = !!k && !o.textContent.toLowerCase().includes(k); if (!o.hidden) shown.push(o); }
-      // 只剩一個結果就直接選好；多個就清空選擇並顯示筆數
-      if (k && shown.length === 1) { sel.value = shown[0].value; inp.value = shown[0].value; }
-      else { sel.value = ''; sel.options[0].textContent = k ? `${t('mapPick')}（${shown.length}）` : t('mapPick'); }
+      // 只剩一個結果、而且是完整的 BrickLink 顏色表時才自動選好（內建清單不完整，自動選容易選錯）
+      sel.options[0].textContent = k ? `${t('mapPick')}（${shown.length}）` : t('mapPick');
+      if (k && shown.length === 1 && BLPAB.blColors) { sel.value = shown[0].value; inp.value = shown[0].value; }
+      else { sel.value = ''; if (shown.length !== 1) inp.value = ''; }
     });
     q.focus();
     box.addEventListener('click', async (ev) => {
       ev.stopPropagation();
       const m = ev.target.dataset && ev.target.dataset.m;
-      if (m === 'cancel') { box.replaceWith(link); return; }
+      if (m === 'cancel') { close(); return; }
+      if (m === 'reload') { ev.preventDefault(); box.querySelector('.blpab-mapstatus').textContent = t('pgWait'); await ensureBlColors(true); await BLPAB.load(); close(); openMapEditor(link); return; }
       if (m !== 'save') return;
       const id = (inp.value || sel.value || '').trim();
       if (!/^\d+$/.test(id)) return;
@@ -417,6 +436,7 @@
         <span class="blpab-actions"><button data-act="sync" title="${esc(t('tipSync'))}">⟳</button><button data-act="min" title="${esc(t('tipMin'))}">▁</button></span></div>
       <div class="blpab-body">${content}</div><div class="blpab-foot">${statusLine()}</div>`;
     clampPanel();
+    requestAnimationFrame(clampPanel);
   }
 
   // ---------- 清單頁標籤 ----------
@@ -503,7 +523,7 @@
       first = first || a;
       let chip = a.nextElementSibling && a.nextElementSibling.classList.contains('blpab-chip') ? a.nextElementSibling : null;
       const s = chipSummary(BLPAB.lookup(no));
-      if (!chip) { chip = document.createElement('span'); chip.dataset.no = no; a.after(chip); }
+      if (!chip) { chip = document.createElement('span'); chip.dataset.no = no; a.after(chip); a.after(document.createTextNode(' ')); }
       chip.className = 'blpab-chip ' + s.cls;
       chip.dataset.state = s.state;
       chip.textContent = s.text;
@@ -617,40 +637,44 @@
   }
 
   // ---------- BrickLink 顏色表（用來顯示 BL 顏色名稱、比對新顏色） ----------
-  async function ensureBlColors() {
+  function parseColourList(html) {
+    const list = [], seen = new Set();
+    const add = (id, name) => { name = (name || '').replace(/\s+/g, ' ').trim(); if (name && id > 0 && !seen.has(id) && /[A-Za-z]/.test(name) && name.length < 50) { seen.add(id); list.push([id, name]); } };
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    // 方法 1：表格列「ID ｜ 色塊 ｜ 名稱 …」
+    for (const tr of doc.querySelectorAll('tr')) {
+      if (tr.querySelector('tr')) continue;
+      const cells = [...tr.children].map((td) => td.textContent.replace(/\s+/g, ' ').trim());
+      const i = cells.findIndex((c) => /^\d{1,3}$/.test(c));
+      if (i < 0) continue;
+      add(Number(cells[i]), cells.slice(i + 1).find((c) => /[A-Za-z]/.test(c)));
+    }
+    // 方法 2：連結裡帶 colorID=…
+    if (list.length < 50) for (const a of doc.querySelectorAll('a[href*="olorID="], a[href*="olorPart="], a[href*="idColor="]')) {
+      const m = /(?:color(?:ID|Part)|idColor)=(\d+)/i.exec(a.getAttribute('href') || '');
+      if (m) add(Number(m[1]), a.textContent);
+    }
+    // 方法 3：新版頁面把資料放在 JSON 裡，例如 "color_id":1,"color_name":"White"
+    if (list.length < 50) {
+      const re = /"(?:color_?id|colorId|idColor)"\s*:\s*(\d+)\s*,\s*"(?:color_?name|colorName|strColorName|name)"\s*:\s*"([^"]{1,49})"/gi;
+      let m; while ((m = re.exec(html))) add(Number(m[1]), m[2]);
+    }
+    return list;
+  }
+  async function ensureBlColors(force) {
     const st = (await blpabApi.storage.local.get('blColorsStatus')).blColorsStatus;
-    if (BLPAB.blColors && Date.now() - BLPAB.blColors.ts < 30 * 864e5) return;
-    if (st && !st.ok && Date.now() - st.ts < 6 * 3600e3) return;   // 失敗後 6 小時內不重試
-    let reason = '';
-    try {
-      const r = await fetch('/catalogColors.asp', { credentials: 'include' });
-      const html = await r.text();
-      const doc = new DOMParser().parseFromString(html, 'text/html');
-      const list = [], seen = new Set();
-      const add = (id, name) => { name = (name || '').replace(/\s+/g, ' ').trim(); if (name && !seen.has(id) && /[A-Za-z]/.test(name)) { seen.add(id); list.push([id, name]); } };
-      // 方法 1：表格列「ID ｜ 色塊 ｜ 名稱 …」
-      for (const tr of doc.querySelectorAll('tr')) {
-        if (tr.querySelector('tr')) continue;
-        const cells = [...tr.children].map((td) => td.textContent.replace(/\s+/g, ' ').trim());
-        const i = cells.findIndex((c) => /^\d{1,3}$/.test(c));
-        if (i < 0) continue;
-        add(Number(cells[i]), cells.slice(i + 1).find((c) => /[A-Za-z]/.test(c)));
-      }
-      // 方法 2：連結裡帶 colorID=…（例如顏色名稱連到該色的零件清單）
-      if (list.length < 50) for (const a of doc.querySelectorAll('a[href*="olorID="], a[href*="olorPart="]')) {
-        const m = /color(?:ID|Part)=(\d+)/i.exec(a.getAttribute('href') || '');
-        if (m) add(Number(m[1]), a.textContent);
-      }
-      // 方法 3：原始 HTML 用正規表示式找「<td>數字</td> … <td>名稱</td>」
-      if (list.length < 50) {
-        const re = /<td[^>]*>\s*(?:<[^>]+>\s*)*(\d{1,3})\s*(?:<\/[^>]+>\s*)*<\/td>\s*<td[^>]*>[\s\S]{0,400}?<\/td>\s*<td[^>]*>\s*(?:<[^>]+>\s*)*(?:&nbsp;)?\s*([A-Za-z][^<]{1,40})/gi;
-        let m; while ((m = re.exec(html))) add(Number(m[1]), m[2].replace(/&nbsp;/g, ' '));
-      }
+    if (!force && BLPAB.blColors && Date.now() - BLPAB.blColors.ts < 30 * 864e5) return;
+    if (!force && st && !st.ok && Date.now() - st.ts < 6 * 3600e3) return;   // 失敗後 6 小時內不自動重試
+    const reasons = [];
+    for (const url of ['https://www.bricklink.com/catalogColors.asp', 'https://www.bricklink.com/catalogColors.asp?sortBy=I', 'https://v2.bricklink.com/en-us/catalog/color-guide']) {
+      const r = await blpabApi.runtime.sendMessage({ type: 'fetchText', url }).catch((e) => ({ error: String(e) }));
+      if (!r || r.error) { reasons.push(`${url.replace('https://', '')}: ${r ? r.error : 'no response'}`); continue; }
+      const list = parseColourList(r.text || '');
       const ok = list.length >= 50 && list.some(([id, n]) => id === 1 && /white/i.test(n)) && list.some(([id, n]) => id === 11 && /black/i.test(n));
-      if (ok) { await blpabApi.storage.local.set({ blColors: { ts: Date.now(), list }, blColorsStatus: { ts: Date.now(), ok: true, n: list.length } }); return; }
-      reason = `HTTP ${r.status}, ${list.length} colours parsed, ${html.length} bytes`;
-    } catch (e) { reason = String((e && e.message) || e); }
-    await blpabApi.storage.local.set({ blColorsStatus: { ts: Date.now(), ok: false, reason } });
+      if (ok) { await blpabApi.storage.local.set({ blColors: { ts: Date.now(), list, src: r.url }, blColorsStatus: { ts: Date.now(), ok: true, n: list.length } }); return; }
+      reasons.push(`${url.replace('https://', '')}: HTTP ${r.status}, ${list.length} colours${r.url && r.url !== url ? ' → ' + r.url : ''}`);
+    }
+    await blpabApi.storage.local.set({ blColorsStatus: { ts: Date.now(), ok: false, reason: reasons.join(' ｜ ') } });
   }
 
   // ---------- 啟動 ----------

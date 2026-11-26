@@ -123,3 +123,7 @@ table.blpab-cmp th { width: 44%; white-space: normal; }
 table.blpab-cmp .blpab-num { white-space: normal; line-height: 1.25; }
 table.blpab-cmp .blpab-num .blpab-price, table.blpab-cmp .blpab-num b { white-space: nowrap; }
 .blpab-cheap { font-size: 9px; padding: 0 4px; margin-left: 3px; vertical-align: 2px; }
+
+/* v1.6 */
+tr.blpab-maptr td { background: #f8fafc; padding: 6px 8px; }
+.blpab-maprow button { white-space: nowrap; flex: 0 0 auto; }
