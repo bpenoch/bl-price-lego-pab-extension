@@ -4,7 +4,7 @@
   color: #1d2433; background: var(--blpab-bg); border: 1px solid var(--blpab-line); border-radius: 8px;
   box-shadow: 0 8px 28px rgba(16, 24, 40, .18); z-index: 2147483000; text-align: left;
 }
-#blpab-panel { position: fixed; top: 120px; right: 12px; width: min(460px, 42vw); min-width: 300px; max-width: calc(100vw - 24px); max-height: calc(100vh - 140px); display: flex; flex-direction: column; }
+#blpab-panel { position: fixed; top: auto; bottom: 16px; right: 16px; width: min(340px, calc(100vw - 32px)); min-width: 260px; max-height: calc(100vh - 32px); display: flex; flex-direction: column; }
 #blpab-panel.blpab-min { width: auto; min-width: 0; max-width: min(420px, calc(100vw - 40px)); }
 #blpab-panel.blpab-min .blpab-foot { display: none; }
 .blpab-t-min { display: none; }
@@ -34,7 +34,7 @@
 .blpab-table td.blpab-color { min-width: 140px; }
 .blpab-cw { display: flex; gap: 6px; align-items: flex-start; }
 .blpab-color small { display: block; color: var(--blpab-muted); font-size: 11px; }
-.blpab-sw { flex: 0 0 auto; width: 14px; height: 14px; margin-top: 1px; border-radius: 3px; border: 1px solid #b8bfca; background: repeating-linear-gradient(45deg, #eee 0 3px, #fff 3px 6px); }
+.blpab-sw { flex: 0 0 auto; width: 13px; height: 13px; margin-top: 1px; border-radius: 50%; border: 1px solid rgba(0,0,0,.25); box-shadow: 0 1px 2px rgba(0,0,0,.25); background: repeating-linear-gradient(45deg, #eee 0 3px, #fff 3px 6px); }
 .blpab-cell { white-space: nowrap; }
 .blpab-cell + .blpab-cell { margin-top: 2px; }
 .blpab-cell-oos b { text-decoration: line-through; color: #98a2b3; }
@@ -89,9 +89,7 @@ a.blpab-price:hover { color: #1849a9; border-bottom-color: #1849a9; }
 .blpab-selname { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-bottom: 4px; }
 table.blpab-cmp { width: 100%; border-collapse: collapse; margin: 4px 0 2px; background: #fff; border-radius: 6px; overflow: hidden; font-size: 12px; }
 table.blpab-cmp th, table.blpab-cmp td { padding: 5px 6px; border-bottom: 1px solid #f2e6b8; text-align: left; vertical-align: top; font-size: 12px; line-height: 1.35; }
-table.blpab-cmp th { font-weight: 600; color: #344054; white-space: nowrap; width: 34%; }
-table.blpab-cmp td.blpab-num { text-align: right; white-space: nowrap; font-size: 14px; }
-table.blpab-cmp td.blpab-num small { font-size: 10px; white-space: normal; }
+table.blpab-cmp th { font-weight: 700; color: #1d2433; white-space: nowrap; width: 1%; padding-right: 10px; font-size: 13px; }
 table.blpab-cmp tr.blpab-best th, table.blpab-cmp tr.blpab-best td { background: #dcfae6; }
 .blpab-cheap { background: #067647; color: #fff; }
 .blpab-eids { margin-top: 4px; font-size: 11px; color: #475467; }
@@ -100,3 +98,10 @@ table.blpab-cmp tr.blpab-best th, table.blpab-cmp tr.blpab-best td { background:
 .blpab-mapedit select { max-width: 160px; font-size: 11px; }
 .blpab-mapedit input { width: 64px; font-size: 11px; }
 .blpab-mapedit button { font-size: 11px; padding: 1px 6px; border: 1px solid #d0d5dd; border-radius: 4px; background: #fff; cursor: pointer; }
+
+/* v1.4：比價表兩欄「網站｜價格」，價格最大；其他資訊放下方小字 */
+table.blpab-cmp .blpab-num { text-align: right; white-space: nowrap; font-size: 16px; font-weight: 800; }
+table.blpab-cmp .blpab-num a.blpab-price { font-weight: 800; }
+table.blpab-cmp .blpab-sub2 { text-align: right; font-size: 10.5px; line-height: 1.35; margin-top: 2px; color: #475467; }
+table.blpab-cmp .blpab-sub2 .blpab-tag { margin-left: 2px; }
+.blpab-mapsearch { width: 120px; font-size: 11px; }

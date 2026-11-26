@@ -111,9 +111,8 @@ const BLPAB = {
     const cur = (this.altNos[no] || []).join(',');
     if (!alts.length || cur === alts.join(',')) return;
     const { altNos } = await blpabApi.storage.local.get('altNos');
-    const m = altNos || {};
-    m[no] = alts;
-    this.altNos = m;
+    const m = Object.assign({}, altNos, { [no]: alts });
+    this.altNos = Object.assign(this.altNos, m);
     await blpabApi.storage.local.set({ altNos: m });
   },
 

@@ -106,7 +106,7 @@
     const body = rows.map((r) => {
       const eids = [...new Set(sites.flatMap((s) => (r.per[s] || []).map((e) => e.eid)))];
       return `<tr class="${r.sel ? 'blpab-sel' : ''}${anyAv(r) ? '' : ' blpab-row-oos'}">
-        <td class="blpab-color"><div class="blpab-cw">${swatch(r.lego)}<span><b>${esc(r.bl ? r.bl.name : r.colorName)}</b><small>${blLabel(r.bl, r.lego, r.colorName)}</small><small>LEGO ${esc(r.colorName)} · Element ${eids.join(', ')}</small></span></div></td>
+        <td class="blpab-color"><div class="blpab-cw">${swatch(r.lego)}<span><b>${esc(r.bl ? r.bl.name : r.colorName)}</b><small>${blLabel(r.bl, r.lego, r.colorName)}</small><small>LEGO ${esc(r.colorName)}${BLPAB_GDS[r.lego] ? ` · GDS ${BLPAB_GDS[r.lego][0]} ${esc(BLPAB_GDS[r.lego][1])}` : ''} · Element ${eids.join(', ')}</small></span></div></td>
         ${priceCell(r)}</tr>`;
     }).join('');
     return { html: `<table class="blpab-table"><thead>${head}</thead><tbody>${body}</tbody></table>`, rows };
@@ -195,22 +195,25 @@
     const min = vals.length > 1 ? Math.min(...vals) : null;
     const tag = (k) => min != null && usd[k] === min ? ` <span class="blpab-tag blpab-cheap">${t('cheapest')}</span>` : '';
     const cls = (k) => min != null && usd[k] === min ? ' class="blpab-best"' : '';
+    // 每列只有兩欄「網站｜價格」，出貨／限購／匯率放在價格下方小字（面板窄也不用橫向捲動）
+    const row = (key, label, priceHtml, sub) => `<tr${cls(key)}><th>${label}</th><td><div class="blpab-num">${priceHtml}${tag(key)}</div>${sub ? `<div class="blpab-sub2">${sub}</div>` : ''}</td></tr>`;
     const pabRow = (site, e, label) => {
       if (!BLPAB.sites().includes(site)) return '';
-      if (res[site] === null) return `<tr><th>${label}</th><td class="blpab-na">${t('notSynced')}</td><td></td></tr>`;
-      if (!e) return `<tr><th>${label}</th><td class="blpab-na">—</td><td class="blpab-muted">${t('noColour')}</td></tr>`;
-      const ship = !e.available ? `<span class="blpab-bad">${t('outOfStock')}</span>` : e.channel === 'B' ? t('shipStd') : t(site === 'US' ? 'shipUS' : 'shipNL');
-      const fx = site === 'NL' && nlUsd != null ? `<br><small class="blpab-muted">${esc(t('fxNote', { usd: '$' + nlUsd.toFixed(2), rate: BLPAB.fx.rate.toFixed(4), date: BLPAB.fx.date }))}</small>` : '';
-      return `<tr${cls(site)}><th>${label}</th><td class="blpab-num">${priceLink(e)}${tag(site)}${fx}</td><td>${chTag(e)}${limTag(e)}<br><small class="blpab-muted">${ship}</small></td></tr>`;
+      if (res[site] === null) return row(site, label, `<span class="blpab-na">${t('notSynced')}</span>`, '');
+      if (!e) return row(site, label, '<span class="blpab-na">—</span>', `<span class="blpab-muted">${t('noColour')}</span>`);
+      const ship = !e.available ? '' : e.channel === 'B' ? t('shipStd') : t(site === 'US' ? 'shipUS' : 'shipNL');
+      const fx = site === 'NL' && nlUsd != null ? `<div class="blpab-muted" title="${esc(t('fxTip', { date: BLPAB.fx.date }))}">${esc(t('fxNote', { usd: '$' + nlUsd.toFixed(2), rate: BLPAB.fx.rate.toFixed(3) }))}</div>` : '';
+      return row(site, label, priceLink(e), `${fx}${chTag(e)}${limTag(e)} <span class="blpab-muted">${ship}</span>`);
     };
     let blRow;
-    if (!pg) blRow = `<td class="blpab-na">${t('pgWait')}</td><td></td>`;
-    else if (!bl) blRow = `<td class="blpab-na">${t('pgNA')}</td><td></td>`;
-    else if (!blOk) blRow = `<td colspan="2" class="blpab-bad">${esc(t('pgNotUsd', { cur: bl.cur }))}</td>`;
-    else blRow = `<td class="blpab-num"><b>${pg.stockNew ? `${pg.stockNew.approx ? '~' : ''}$${pg.stockNew.v.toFixed(4)}` : '—'}</b>${tag('BL')}</td><td><small class="blpab-muted">${pg.soldNew ? esc(t('soldNote', { p: '$' + pg.soldNew.v.toFixed(4) })) : ''}</small></td>`;
-    const table = `<table class="blpab-cmp">${pabRow('US', us, t('srcUS'))}${pabRow('NL', nl, t('srcNL'))}<tr${cls('BL')}><th>${t('srcBL')}</th>${blRow}</tr></table>`;
+    if (!pg) blRow = row('BL', t('srcBL'), `<span class="blpab-na">${t('pgWait')}</span>`, '');
+    else if (!bl) blRow = row('BL', t('srcBL'), `<span class="blpab-na">${t('pgNA')}</span>`, '');
+    else if (!blOk) blRow = row('BL', t('srcBL'), '<span class="blpab-na">—</span>', `<span class="blpab-bad">${esc(t('pgNotUsd', { cur: bl.cur }))}</span>`);
+    else blRow = row('BL', t('srcBL'), `<b>${pg.stockNew ? `${pg.stockNew.approx ? '~' : ''}$${pg.stockNew.v.toFixed(4)}` : '—'}</b>`,
+      pg.soldNew ? `<span class="blpab-muted">${esc(t('soldNote', { p: '$' + pg.soldNew.v.toFixed(4) }))}</span>` : '');
+    const table = `<table class="blpab-cmp">${pabRow('US', us, t('srcUS'))}${pabRow('NL', nl, t('srcNL'))}${blRow}</table>`;
     // 結論：PAB 美國站 vs BrickLink 現貨 New
-    let verdict = '', verdictText = '';
+    let verdict = '', verdictText = '', shortVerdict = '';
     if (blOk && pg.stockNew) {
       if (usd.US == null) { verdict = `<div class="blpab-verdict blpab-verdict-na">${t('verdictNoUs')}</div>`; }
       else {
@@ -218,12 +221,13 @@
         const pct = Math.round((p - ref) / ref * 100);
         verdictText = pct < 0 ? t('verdictCheaper', { p: -pct }) : pct > 0 ? t('verdictDearer', { p: Math.round((p - ref) / p * 100) }) : t('verdictSame');
         verdict = `<div class="blpab-verdict ${pct < 0 ? 'blpab-good' : pct > 0 ? 'blpab-dear' : ''}">${verdictText}</div>`;
+        shortVerdict = pct < 0 ? t('shortPab', { p: -pct }) : pct > 0 ? t('shortBl', { p: Math.round((p - ref) / p * 100) }) : '=';
       }
     }
     const eids = [...new Set(sel.flatMap((r) => BLPAB.sites().flatMap((s) => (r.per[s] || []).map((e) => e.eid))))];
     const site0 = us ? 'US' : 'NL', e0 = us || nl;
     const links = eids.length ? `<div class="blpab-eids">Element ${eids.join(', ')}${e0 ? ` · <a href="${BLPAB.pabUrl(site0, e0.eid)}" target="_blank" rel="noopener">${t('openLego')}</a>` : ''}</div>` : '';
-    return { html: verdict + table + `<small class="blpab-muted">${t('verdictBasis')}</small>` + links, verdictText };
+    return { html: verdict + table + `<small class="blpab-muted">${t('verdictBasis')}</small>` + links, verdictText: shortVerdict };
   }
 
   // ---------- 零件頁面板 ----------
@@ -250,21 +254,21 @@
       const r = panel.getBoundingClientRect(), dx = ev.clientX - r.left, dy = ev.clientY - r.top;
       const move = (e) => placePanel(e.clientX - dx, e.clientY - dy);
       const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up);
-        const rr = panel.getBoundingClientRect(); ls.set('pos', Math.round(rr.left) + ',' + Math.round(rr.top)); };
+        const rr = panel.getBoundingClientRect(); ls.set('pos2', Math.round(rr.left) + ',' + Math.round(rr.top)); };
       document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
       ev.preventDefault();
     });
     window.addEventListener('resize', clampPanel);
   }
   function placePanel(x, y) {
-    panel.style.left = x + 'px'; panel.style.top = y + 'px'; panel.style.right = 'auto';
+    panel.style.left = x + 'px'; panel.style.top = y + 'px'; panel.style.right = 'auto'; panel.style.bottom = 'auto';
     clampPanel();
   }
   // 讓面板永遠留在視窗內，底部狀態列看得到
   function clampPanel() {
     if (!panel) return;
-    const pos = (ls.get('pos') || '').split(',').map(Number);
-    if (!panel.style.left && pos.length === 2 && pos.every((n) => n >= 0)) { panel.style.left = pos[0] + 'px'; panel.style.top = pos[1] + 'px'; panel.style.right = 'auto'; }
+    const pos = (ls.get('pos2') || '').split(',').map(Number);
+    if (!panel.style.left && pos.length === 2 && pos.every((n) => n >= 0)) { panel.style.left = pos[0] + 'px'; panel.style.top = pos[1] + 'px'; panel.style.right = 'auto'; panel.style.bottom = 'auto'; }
     const r = panel.getBoundingClientRect();
     // 可視範圍（扣掉捲軸）；BrickLink 舊頁面是 quirks mode，要改用 body 的寬度
     const root = document.compatMode === 'BackCompat' ? document.body : document.documentElement;
@@ -276,7 +280,8 @@
       panel.style.left = x + 'px'; panel.style.top = y + 'px';
     }
     if (!panel.style.left && r.right > vw - 4) panel.style.right = (window.innerWidth - vw + 8) + 'px';   // 預設靠右時避開捲軸
-    panel.style.maxHeight = Math.max(160, vh - y - 16) + 'px';
+    // 預設停在右下角（往上長）；拖過之後才用 top/left
+    panel.style.maxHeight = (panel.style.left ? Math.max(160, vh - y - 16) : vh - 32) + 'px';
   }
 
   // 「設定對照」：在面板裡選 BrickLink 顏色（或輸入編號），不用瀏覽器原生輸入框
@@ -290,11 +295,16 @@
     const lego = link.dataset.lego, name = link.dataset.name;
     const box = document.createElement('span');
     box.className = 'blpab-mapedit';
-    box.innerHTML = `<select><option value="">${esc(t('mapPick'))}</option>${blColourOptions().map(([id, n]) => `<option value="${id}">${esc(n)} (${id})</option>`).join('')}</select>
+    box.innerHTML = `<input type="search" class="blpab-mapsearch" placeholder="${esc(t('mapSearch'))}"><select><option value="">${esc(t('mapPick'))}</option>${blColourOptions().map(([id, n]) => `<option value="${id}">${esc(n)} (${id})</option>`).join('')}</select>
       <input type="number" min="1" placeholder="${esc(t('mapOther'))}"> <button type="button" data-m="save">${t('mapSave')}</button> <button type="button" data-m="cancel">${t('mapCancel')}</button>`;
     link.replaceWith(box);
-    const sel = box.querySelector('select'), inp = box.querySelector('input');
+    const sel = box.querySelector('select'), inp = box.querySelector('input[type=number]'), q = box.querySelector('.blpab-mapsearch');
     sel.addEventListener('change', () => { if (sel.value) inp.value = sel.value; });
+    q.addEventListener('input', () => {   // 輸入字或編號篩選選單
+      const k = q.value.trim().toLowerCase();
+      for (const o of sel.options) if (o.value) o.hidden = !!k && !o.textContent.toLowerCase().includes(k);
+    });
+    q.focus();
     box.addEventListener('click', async (ev) => {
       ev.stopPropagation();
       const m = ev.target.dataset && ev.target.dataset.m;
@@ -330,12 +340,12 @@
     const sites = BLPAB.sites();
     const noData = sites.every((s) => res[s] === null);
     const total = sites.reduce((n, s) => n + ((res[s] || []).length), 0);
-    let content, headExtra = '', verdictText = '';
+    let content, headExtra = '', verdictText = '', minExtra = '';
     if (!sites.length) content = `<p class="blpab-msg">${t('noSites')}</p>`;
     else if (noData) content = noticeBox() || `<p class="blpab-msg">${t('noDataYet')}</p>`;
     else if (!total) {
       content = `<p class="blpab-msg">${t('notOnPabLong', { ids: esc(BLPAB.designCandidates(info.no).join(', ')) })}</p>` + noticeBox();
-      headExtra = t('headNone');
+      headExtra = t('headNone'); minExtra = t('chipNone');
     } else {
       const tb = colorTable(res, info.color);
       const via = !res.via.length ? '' : res.viaGuess
@@ -355,7 +365,8 @@
           const card = compareCard(sel, res, pg);
           verdictText = card.verdictText;
           const legoNames = [...new Set(sel.map((r) => r.colorName))].join(', ');
-          selBox = `<div class="blpab-summary"><div class="blpab-selname">${swatch(sel[0].lego)}<span>${t('selColour', { name: esc(blName) })}</span><small>${esc(t('legoName', { name: legoNames }))}</small></div>${card.html}</div>`;
+          const g = BLPAB_GDS[sel[0].lego];
+          selBox = `<div class="blpab-summary"><div class="blpab-selname">${swatch(sel[0].lego)}<span>${t('selColour', { name: esc(blName) })}</span><small>${esc(t('legoName', { name: legoNames }))}${g ? ` · GDS ${g[0]} ${esc(g[1])}` : ''}</small></div>${card.html}</div>`;
         } else {
           const blOnly = pg ? compareCard([], res, pg).html.replace(/<div class="blpab-verdict[^>]*>.*?<\/div>/, '') : '';
           selBox = `<div class="blpab-summary blpab-summary-none">${t('notThisColour', { name: esc(blName), list: names(avRows.map((r) => r.bl ? r.bl.name : r.colorName), 12) || t('none') })}${blOnly}</div>`;
@@ -374,9 +385,10 @@
       content = via + selBox + noticeBox() + (others > 0 ? `<button class="blpab-expand" data-act="expand">${btn}</button>` : '')
         + (expanded ? `<div class="blpab-lines">${sites.map((s) => siteSummary(s, res[s])).join('')}</div>` + tb.html : '');
       headExtra = t('headAvail', { a: avRows.length, n: tb.rows.length });
+      minExtra = t('colours', { n: avRows.length });
     }
     // 收合時標題列只顯示一行：編號＋結論
-    panel.innerHTML = `<div class="blpab-head" title="${esc(t('tipDrag'))}"><span class="blpab-title"><span class="blpab-t-full">LEGO PAB · ${esc(info.no)}${headExtra}</span><span class="blpab-t-min">PAB · ${esc(info.no)}${verdictText ? ' · ' + esc(verdictText.split('→')[0].trim()) : ''}</span></span>
+    panel.innerHTML = `<div class="blpab-head" title="${esc(t('tipDrag'))}"><span class="blpab-title"><span class="blpab-t-full">LEGO PAB · ${esc(info.no)}${headExtra}</span><span class="blpab-t-min">PAB · ${esc(info.no)}${verdictText ? ' · ' + esc(verdictText) : minExtra ? ' · ' + esc(minExtra) : ''}</span></span>
         <span class="blpab-actions"><button data-act="sync" title="${esc(t('tipSync'))}">⟳</button><button data-act="min" title="${esc(t('tipMin'))}">▁</button></span></div>
       <div class="blpab-body">${content}</div><div class="blpab-foot">${statusLine()}</div>`;
     clampPanel();
@@ -399,7 +411,7 @@
       const lo = Math.min(...ps), hi = Math.max(...ps), cur = av[0].currency;
       lines.push(t('chipLine', { site: SITE(s), range: `${BLPAB.money(lo, cur)}${hi !== lo ? '–' + hi.toFixed(2) : ''}`, n: cols }));
       // 標籤只放最低價＋色數，避免太長壓到隔壁格；完整區間在提示框
-      short.push({ s, text: `${BLPAB.money(lo, cur)}${hi !== lo ? '+' : ''} · ${cols}${BLPAB_LANG === 'zh' ? '色' : 'c'}` });
+      short.push({ s, text: `${BLPAB.money(lo, cur)}${hi !== lo ? '–' + hi.toFixed(2) : ''}` });   // 標籤只放價格；色數在提示框
     }
     if (!any) return { text: t('chipNone'), cls: 'blpab-chip-none', title: t('chipTipNone'), state: 'none' };
     if (!short.length) return { text: pre + t('chipOos'), cls: 'blpab-chip-oos', title: viaTip + lines.join('\n'), state: 'oos' };
@@ -474,6 +486,7 @@
     }
     if (first) filterBar(first);
     applyFilter();
+    queueAltLookups();
   }
 
   // ---------- 只看 PAB 有賣（放在清單上方） ----------
@@ -493,28 +506,80 @@
     b.querySelector('span').textContent = t('filter');
   }
   function applyFilter() {
-    const on = ls.get('filter') === '1';
-    const hideNos = new Set(), showNos = new Set();
-    for (const chip of document.querySelectorAll('.blpab-chip')) (on && chip.dataset.state !== 'ok' ? hideNos : showNos).add(chip.dataset.no.toLowerCase());
-    // 同一個零件的所有連結（編號、圖片）都一起隱藏；縮圖檢視隱藏格子，清單檢視隱藏整列
-    for (const a of document.querySelectorAll('a[href*="P="]')) {
-      if (a.closest('#blpab-panel, .blpab-pop, #blpab-filter')) continue;
-      const no = (partNoOf(a) || '').toLowerCase();
-      if (!no || (!hideNos.has(no) && !showNos.has(no))) continue;
-      const tr = a.closest('tr');
-      if (!tr) continue;
-      const nosInRow = new Set([...tr.querySelectorAll('a[href*="P="]')].map((x) => (partNoOf(x) || '').toLowerCase()).filter(Boolean));
-      const hide = hideNos.has(no);
-      if (nosInRow.size > 1) {
-        // 縮圖檢視：隱藏這一格，以及上一列／下一列同一欄的圖片格
-        const td = a.closest('td'); if (!td) continue;
-        td.style.visibility = hide ? 'hidden' : '';
-        for (const sib of [tr.previousElementSibling, tr.nextElementSibling]) {
-          const cell = sib && sib.children[td.cellIndex];
-          if (cell && cell.querySelector('img') && !cell.querySelector('a[href*="P="]')) cell.style.visibility = hide ? 'hidden' : '';
-        }
-      } else tr.style.display = hide ? 'none' : '';
+    // 先還原上次藏起來的
+    for (const el of document.querySelectorAll('[data-blpab-hid]')) {
+      if (el.dataset.blpabHid === 'd') el.style.display = ''; else el.style.visibility = '';
+      delete el.dataset.blpabHid;
     }
+    if (ls.get('filter') !== '1') return;
+    const hideEl = (el, mode) => { if (!el || el.dataset.blpabHid) return; el.dataset.blpabHid = mode; if (mode === 'd') el.style.display = 'none'; else el.style.visibility = 'hidden'; };
+    const chips = [...document.querySelectorAll('.blpab-chip')];
+    const hideChips = chips.filter((c) => c.dataset.state !== 'ok');
+    const keepChips = chips.filter((c) => c.dataset.state === 'ok');
+    // 每個要藏的零件：先記下位置，再一起藏（visibility 不會改變版面）
+    const plans = hideChips.map((chip) => {
+      const tr = chip.closest('tr');
+      const chipsInRow = tr ? tr.querySelectorAll('.blpab-chip').length : 0;
+      if (tr && chipsInRow === 1) return { mode: 'row', tr };          // 清單檢視：整列
+      const td = chip.closest('td') || chip.parentElement;
+      return { mode: 'cell', td, rect: td.getBoundingClientRect() };  // 縮圖檢視：這一格＋上方的縮圖
+    });
+    const keepRects = keepChips.map((c) => (c.closest('td') || c.parentElement).getBoundingClientRect());
+    const imgs = [...document.querySelectorAll('img')].filter((im) => !im.closest('#blpab-panel, .blpab-pop, #blpab-filter'))
+      .map((im) => ({ im, r: im.getBoundingClientRect() })).filter((x) => x.r.width > 8 && x.r.height > 8);
+    const overlapsX = (r, c) => Math.min(r.right, c.right) - Math.max(r.left, c.left) > Math.min(r.width, c.width) * 0.5;
+    for (const p of plans) {
+      if (p.mode === 'row') { hideEl(p.tr, 'd'); continue; }
+      hideEl(p.td, 'v');
+      for (const { im, r } of imgs) {
+        if (!overlapsX(r, p.rect)) continue;
+        if (r.bottom > p.rect.bottom + 4 || r.bottom < p.rect.top - 260) continue;   // 同一欄、在編號上方 260px 內
+        // 不要藏到別的（有賣的）零件格裡的圖
+        if (keepRects.some((k) => r.left >= k.left - 2 && r.right <= k.right + 2 && r.top >= k.top - 2 && r.bottom <= k.bottom + 2)) continue;
+        hideEl(im.closest('a') || im, 'v');
+        const cell = im.closest('td');
+        if (cell && !cell.querySelector('.blpab-chip') && cell.querySelectorAll('img').length === 1) hideEl(cell, 'v');
+      }
+    }
+  }
+
+  // ---------- 清單頁：查零件頁上的 Alternate Item No（例如 3006 → 92538），不用先開零件頁 ----------
+  const altQueue = [], altAsked = new Set();
+  let altRunning = 0, altSave = Promise.resolve();
+  function queueAltLookups() {
+    for (const chip of document.querySelectorAll('.blpab-chip[data-state="none"]')) {
+      const no = chip.dataset.no;
+      if (altAsked.has(no) || BLPAB.altNos[no] !== undefined || BLPAB.sites().every((s) => !BLPAB.data[s])) continue;
+      if (altAsked.size >= 60) break;   // 一頁最多查 60 個
+      altAsked.add(no); altQueue.push(no);
+    }
+    while (altRunning < 2 && altQueue.length) runAlt(altQueue.shift());
+  }
+  async function runAlt(no) {
+    altRunning++;
+    try {
+      let alts = null;
+      for (const url of [`/v2/catalog/catalogitem.page?P=${encodeURIComponent(no)}`, `/catalogItem.asp?P=${encodeURIComponent(no)}`]) {
+        const r = await fetch(url, { credentials: 'include' });
+        if (!r.ok) continue;
+        const text = (await r.text()).replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
+        const m = /Alternate Item No\.?:\s*([A-Za-z0-9][\w.\-]*(?:\s*,\s*[A-Za-z0-9][\w.\-]*)*)/.exec(text);
+        if (m) { alts = m[1].split(/\s*,\s*/).filter(Boolean); break; }
+        if (/Item No\.?:/.test(text)) { alts = []; break; }   // 頁面有讀到，只是沒有 Alternate
+      }
+      if (alts) {
+        BLPAB.altNos[no] = alts;   // [] 也存，代表查過了
+        // 兩個查詢同時完成時，排隊寫入，避免互相覆蓋
+        altSave = altSave.then(async () => {
+          const { altNos } = await blpabApi.storage.local.get('altNos');
+          await blpabApi.storage.local.set({ altNos: Object.assign({}, altNos, { [no]: alts }) });
+        }).catch(() => {});
+        await altSave;
+      }
+    } catch (e) { /* 查不到就算了 */ }
+    altRunning--;
+    await new Promise((r) => setTimeout(r, 300));
+    queueAltLookups();
   }
 
   // ---------- BrickLink 顏色表（用來顯示 BL 顏色名稱、比對新顏色） ----------
