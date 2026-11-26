@@ -10,7 +10,7 @@ const SITE_URL = {
   NL: 'https://www.lego.com/nl-nl/pick-and-build/pick-a-brick',
 };
 const GQL_URL = 'https://www.lego.com/api/graphql/PickABrickQuery';
-const DEFAULT_SETTINGS = { sites: { US: true, NL: true }, ttlHours: 24, autoSync: true, colorOverrides: {}, aliases: {} };
+const DEFAULT_SETTINGS = { sites: { US: true, NL: true }, ttlHours: 24, autoSync: true, colorOverrides: {}, aliases: {}, lang: 'auto' };
 const TAB_TIMEOUT_MS = 4 * 60 * 1000;
 const TAB_ATTEMPTS = 2;
 
@@ -34,7 +34,7 @@ function enqueue(site) {
 }
 
 async function runSite(site) {
-  await setSiteState(site, { status: 'running', done: 0, total: 0, error: null, started: Date.now(), attempt: 0 });
+  await setSiteState(site, { status: 'running', done: 0, total: 0, error: null, started: Date.now(), attempt: 0, mode: 'direct' });
   // 1. 直接連線
   try {
     const data = await blpabFetchSite(site, GQL_URL, (done, total) => setSiteState(site, { done, total }), 1);
@@ -46,7 +46,7 @@ async function runSite(site) {
   // 2. 分頁模式（含自動重試）
   let result;
   for (let attempt = 1; attempt <= TAB_ATTEMPTS; attempt++) {
-    await setSiteState(site, { status: 'running', done: 0, total: 0, started: Date.now(), attempt });
+    await setSiteState(site, { status: 'running', done: 0, total: 0, started: Date.now(), attempt, mode: 'tab' });
     result = await runTab(site);
     if (!result.error) break;
   }
@@ -59,7 +59,7 @@ async function runTab(site) {
   const tab = await api.tabs.create({ url: SITE_URL[site], active: false });
   const jobs = await getJobs(); jobs[tab.id] = site; await setJobs(jobs);
   return new Promise((resolve) => {
-    const timer = setTimeout(() => finish(tab.id, { error: '逾時：lego.com 分頁 4 分鐘內沒有完成（可能要求驗證或選擇國家；請手動開一次 lego.com 後按 ⟳）' }), TAB_TIMEOUT_MS);
+    const timer = setTimeout(() => finish(tab.id, { error: 'timeout' }), TAB_TIMEOUT_MS);
     waiters[tab.id] = (r) => { clearTimeout(timer); resolve(r); };
   });
 }
@@ -127,5 +127,5 @@ api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 // 同步分頁被關掉（使用者或其他工具關的）→ 這次失敗，runSite 會自動再試一次
 api.tabs.onRemoved.addListener(async (tabId) => {
   const jobs = await getJobs();
-  if (jobs[tabId]) await finish(tabId, { error: '同步用的 lego.com 分頁被關閉了（請不要關掉自動開啟的 lego.com 分頁），按 ⟳ 重試' });
+  if (jobs[tabId]) await finish(tabId, { error: 'tab_closed' });
 });

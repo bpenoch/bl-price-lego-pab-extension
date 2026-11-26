@@ -1,0 +1,8 @@
+{
+  "name": {
+    "message": "BrickLink × LEGO PAB Prices"
+  },
+  "description": {
+    "message": "Shows LEGO.com Pick a Brick prices (USD/EUR), stock, delivery type and order limits for every colour on BrickLink part and category pages."
+  }
+}

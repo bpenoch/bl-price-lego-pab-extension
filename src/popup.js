@@ -1,7 +1,7 @@
 const api = globalThis.browser || globalThis.chrome;
-const LABEL = { US: '美國站', NL: '荷蘭站' };
-const DEF = { sites: { US: true, NL: true }, ttlHours: 24, autoSync: true, colorOverrides: {}, aliases: {} };
+const DEF = { sites: { US: true, NL: true }, ttlHours: 24, autoSync: true, colorOverrides: {}, aliases: {}, lang: 'auto' };
 const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function parsePairs(text) {
   const o = {};
@@ -12,26 +12,38 @@ function parsePairs(text) {
   return o;
 }
 const pairs = (o) => Object.entries(o || {}).map(([k, v]) => `${k}=${v}`).join('\n');
+const errText = (e) => e === 'tab_closed' ? t('errTabClosed') : e === 'timeout' ? t('errTimeout') : e;
+
+function applyTexts() {
+  document.documentElement.lang = BLPAB_LANG === 'zh' ? 'zh-Hant' : 'en';
+  for (const el of document.querySelectorAll('[data-i]')) el.textContent = t(el.dataset.i);
+}
 
 async function render() {
-  const r = await api.storage.local.get(['settings', 'syncState', 'pab_US', 'pab_NL']);
+  const r = await api.storage.local.get(['syncState', 'pab_US', 'pab_NL', 'blColors', 'blColorsStatus']);
   const st = r.syncState || {};
-  $('status').innerHTML = ['US', 'NL'].map((s) => {
+  let html = ['US', 'NL'].map((s) => {
     const d = r['pab_' + s], x = st[s] || {};
-    let t;
-    if (x.status === 'running') t = `同步中 ${x.total ? Math.round(100 * x.done / x.total) + '%' : '…'}`;
-    else if (d) t = `${new Date(d.ts).toLocaleString()}${x.mode === 'direct' ? '（直接連線）' : x.mode === 'tab' ? '（分頁模式）' : ''}<br>${d.count.toLocaleString()} 筆，可購買 ${d.available.toLocaleString()}（${d.currency}）<br>有限購數量的 ${d.withMax == null ? '—' : d.withMax.toLocaleString()} 筆`;
-    else t = '尚未同步';
-    if (x.status === 'error') t += `<br><span class="err">上次失敗：${x.error}</span>`;
-    return `<div class="site"><b>${LABEL[s]}</b><span class="st">${t}</span></div>`;
+    let txt;
+    if (x.status === 'running') txt = t('syncing', { p: x.total ? Math.round(100 * x.done / x.total) + '%' : '…' }) + (x.mode === 'tab' ? t('pTab') : '');
+    else if (d) txt = `${new Date(d.ts).toLocaleString()}${x.mode === 'direct' ? t('pDirect') : x.mode === 'tab' ? t('pTab') : ''}<br>${t('pCount', { n: d.count.toLocaleString(), a: d.available.toLocaleString(), cur: d.currency })}<br>${t('pWithMax', { n: d.withMax == null ? '—' : d.withMax.toLocaleString() })}`;
+    else txt = t('notSyncedYet');
+    if (x.status === 'error') txt += `<br><span class="err">${esc(t('pLastFail', { e: errText(x.error) }))}</span>`;
+    return `<div class="site"><b>${t('site_' + s)}</b><span class="st">${txt}</span></div>`;
   }).join('');
+  const bs = r.blColorsStatus;
+  const bl = r.blColors ? t('pBlOk', { n: r.blColors.list.length, d: new Date(r.blColors.ts).toLocaleDateString() })
+    : bs && !bs.ok ? `<span class="err">${esc(t('pBlFail', { e: bs.reason }))}</span>` : t('pBlNone');
+  html += `<div class="site"><b>${t('pBlColours')}</b><span class="st">${bl}</span></div>`;
+  $('status').innerHTML = html;
 }
 
 async function loadSettings() {
   const s = { ...DEF, ...((await api.storage.local.get('settings')).settings || {}) };
   s.sites = { ...DEF.sites, ...(s.sites || {}) };
+  blpabSetLang(s.lang); applyTexts();
   $('US').checked = s.sites.US; $('NL').checked = s.sites.NL;
-  $('autoSync').checked = s.autoSync; $('ttlHours').value = s.ttlHours;
+  $('autoSync').checked = s.autoSync; $('ttlHours').value = s.ttlHours; $('lang').value = s.lang || 'auto';
   $('aliases').value = pairs(s.aliases); $('colors').value = pairs(s.colorOverrides);
 }
 
@@ -40,16 +52,18 @@ async function save() {
     sites: { US: $('US').checked, NL: $('NL').checked },
     autoSync: $('autoSync').checked,
     ttlHours: Math.max(1, Number($('ttlHours').value) || 24),
+    lang: $('lang').value,
     aliases: parsePairs($('aliases').value),
     colorOverrides: parsePairs($('colors').value),
   };
   await api.storage.local.set({ settings });
-  $('saved').textContent = '已儲存';
+  blpabSetLang(settings.lang); applyTexts(); render();
+  $('saved').textContent = t('pSaved');
   setTimeout(() => ($('saved').textContent = ''), 1500);
 }
 
-['US', 'NL', 'autoSync', 'ttlHours'].forEach((id) => $(id).addEventListener('change', save));
+['US', 'NL', 'autoSync', 'ttlHours', 'lang'].forEach((id) => $(id).addEventListener('change', save));
 $('save').addEventListener('click', save);
 $('sync').addEventListener('click', async () => { await save(); await api.runtime.sendMessage({ type: 'sync' }); render(); });
 api.storage.onChanged.addListener(render);
-loadSettings(); render();
+loadSettings().then(render);

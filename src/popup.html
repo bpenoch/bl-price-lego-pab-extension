@@ -1,7 +1,7 @@
 <!doctype html>
-<html lang="zh-Hant"><head><meta charset="utf-8"><title>BrickLink × LEGO PAB</title>
+<html><head><meta charset="utf-8"><title>BrickLink × LEGO PAB</title>
 <style>
-  body { width: 340px; margin: 0; font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, "PingFang TC", sans-serif; color: #1d2433; background: #fff; }
+  body { width: 350px; margin: 0; font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, "PingFang TC", sans-serif; color: #1d2433; background: #fff; }
   header { background: #1f3864; color: #fff; padding: 10px 12px; font-weight: 700; }
   section { padding: 10px 12px; border-bottom: 1px solid #eef0f3; }
   h3 { margin: 0 0 6px; font-size: 12px; color: #1f3864; }
@@ -16,27 +16,29 @@
   input[type=number] { width: 54px; }
 </style></head>
 <body>
-<header>BrickLink × LEGO Pick a Brick 價格</header>
+<header data-i="pTitle"></header>
 <section>
-  <h3>資料狀態</h3>
+  <h3 data-i="pStatus"></h3>
   <div id="status"></div>
-  <div style="margin-top:8px"><button id="sync">立即更新 lego.com 價格</button></div>
-  <small>更新時先直接連線 lego.com；不行的話會在背景開一個 lego.com 分頁，抓完（約 30–60 秒／站）自動關閉，<b>請不要手動關掉它</b>。</small>
+  <div style="margin-top:8px"><button id="sync" data-i="pSync"></button></div>
+  <small data-i="pSyncNote"></small>
 </section>
 <section>
-  <h3>設定</h3>
-  <label><input type="checkbox" id="US"> 美國站（USD）</label>
-  <label><input type="checkbox" id="NL"> 荷蘭站（EUR，含 21% 增值稅）</label>
-  <label><input type="checkbox" id="autoSync"> 資料過期時自動更新，有效 <input type="number" id="ttlHours" min="1" max="720"> 小時</label>
+  <h3 data-i="pSettings"></h3>
+  <label><input type="checkbox" id="US"> <span data-i="pUS"></span></label>
+  <label><input type="checkbox" id="NL"> <span data-i="pNL"></span></label>
+  <label><input type="checkbox" id="autoSync"> <span data-i="pAuto"></span> <input type="number" id="ttlHours" min="1" max="720"> <span data-i="pHours"></span></label>
+  <label><span data-i="pLang"></span>：<select id="lang"><option value="auto" data-i="pLangAuto"></option><option value="zh">中文</option><option value="en">English</option></select></label>
 </section>
 <section>
-  <h3>編號對照（BrickLink = LEGO Design ID）</h3>
-  <textarea id="aliases" placeholder="3069b=3069&#10;4073=6141"></textarea>
-  <small>一行一筆。BrickLink 編號結尾的英文字母（如 3069b）會自動去掉再找一次。</small>
-  <h3 style="margin-top:8px">顏色對照（LEGO 顏色編號 = BrickLink 顏色編號）</h3>
-  <textarea id="colors" placeholder="370=91"></textarea>
-  <small>面板上顯示「BL 無對照」的顏色可在這裡補，LEGO 編號會顯示在該列。</small>
-  <div style="margin-top:8px"><button id="save" class="sec">儲存</button> <span id="saved" class="st"></span></div>
+  <h3 data-i="pAliases"></h3>
+  <textarea id="aliases" placeholder="3006=92538&#10;4073=6141"></textarea>
+  <small data-i="pAliasNote"></small>
+  <h3 style="margin-top:8px" data-i="pColours"></h3>
+  <textarea id="colors" placeholder="402=231"></textarea>
+  <small data-i="pColourNote"></small>
+  <div style="margin-top:8px"><button id="save" class="sec" data-i="pSave"></button> <span id="saved" class="st"></span></div>
 </section>
+<script src="i18n.js"></script>
 <script src="popup.js"></script>
 </body></html>
