@@ -22,8 +22,8 @@
   // ---------- 小工具 ----------
   function chTag(e) {
     if (!e.available) return `<span class="blpab-tag blpab-oos">${t('outOfStock')}</span>`;
-    if (e.channel === 'P') return `<span class="blpab-tag blpab-bs" title="${esc(t('tipBestseller'))}">Bestseller</span>`;
-    if (e.channel === 'B') return `<span class="blpab-tag blpab-std" title="${esc(t('tipStandard'))}">Standard</span>`;
+    if (e.channel === 'P') return `<span class="blpab-tag blpab-bs" title="${esc(t('tipBestseller'))}">${t('chBestseller')}</span>`;
+    if (e.channel === 'B') return `<span class="blpab-tag blpab-std" title="${esc(t('tipStandard'))}">${t('chStandard')}</span>`;
     return '';
   }
   const limCls = (q) => q >= 500 ? 'blpab-lim-hi' : q >= 50 ? 'blpab-lim-mid' : 'blpab-lim-lo';
@@ -38,23 +38,26 @@
     const hex = BLPAB.maps.hex[lego];
     return `<span class="blpab-sw" style="${hex ? 'background:' + hex : ''}"></span>`;
   }
-  const blLabel = (bl, lego, name) => bl ? `BL ${bl.id}${bl.guessed ? t('guessed') : ''}`
+  const blLabel = (bl, lego, name) => bl ? `BrickLink ${bl.id}${bl.guessed ? t('guessed') : ''}`
     : `${esc(t('blNoMap', { lego }))} <a href="#" class="blpab-setmap" data-lego="${lego}" data-name="${esc(name)}">${t('setMap')}</a>`;
 
   // ---------- 每站一行摘要（依價格分組） ----------
   function siteSummary(site, list) {
     const cur = (BLPAB.data[site] || {}).currency || '';
-    const head = `<b>${SITE(site)}</b> <small>${esc(cur)}</small>`;
+    const head = `<b>${SITE(site)}</b>`;
     if (list === null) return `<div class="blpab-line">${head}${C()}${t('notSynced')}</div>`;
     if (!list.length) return `<div class="blpab-line">${head}${C()}${t('notOnPab')}</div>`;
-    const av = list.filter((e) => e.available && e.price != null), oos = list.filter((e) => !e.available);
+    const av = list.filter((e) => e.available && e.price != null);
+    const avColours = new Set(av.map((e) => e.lego));
+    const oosSeen = new Set();
+    const oos = list.filter((e) => !e.available && !avColours.has(e.lego) && !oosSeen.has(e.lego) && oosSeen.add(e.lego));
     if (!av.length) return `<div class="blpab-line">${head}${C()}<span class="blpab-bad">${t('allOos', { n: list.length })}</span></div>`;
     const byPrice = new Map();
     for (const e of av) (byPrice.get(e.price) || byPrice.set(e.price, []).get(e.price)).push(e);
     const groups = [...byPrice.entries()].sort((a, b) => b[1].length - a[1].length || a[0] - b[0]);
     const [bp, be] = groups[0];
     let txt;
-    if (groups.length === 1) txt = `${t('allColours', { n: av.length })} <b>${esc(BLPAB.money(bp, cur))}</b>`;
+    if (groups.length === 1) txt = `${t('allColours', { n: avColours.size })} <b>${esc(BLPAB.money(bp, cur))}</b>`;
     else if (groups.length > 3) {   // 價格種類太多：只寫大多數＋區間，細節看顏色表
       const ps = av.map((e) => e.price);
       txt = t('mostly', { p: esc(BLPAB.money(bp, cur)), n: be.length, k: groups.length - 1, lo: esc(BLPAB.money(Math.min(...ps), cur)), hi: esc(BLPAB.money(Math.max(...ps), cur)) });
@@ -65,7 +68,7 @@
     const grp = (tag, ns) => ns.length > 3 ? `${tag} × ${t('colours', { n: ns.length })}` : `${tag} ${names(ns)}`;
     const sub = [];
     const std = av.filter((e) => e.channel === 'B');
-    const bsTag = `<span class="blpab-tag blpab-bs" title="${esc(t('tipBestseller'))}">Bestseller</span>`, stdTag = `<span class="blpab-tag blpab-std" title="${esc(t('tipStandard'))}">Standard</span>`;
+    const bsTag = `<span class="blpab-tag blpab-bs" title="${esc(t('tipBestseller'))}">${t('chBestseller')}</span>`, stdTag = `<span class="blpab-tag blpab-std" title="${esc(t('tipStandard'))}">${t('chStandard')}</span>`;
     if (!std.length) sub.push(`${bsTag} ${t('all')}`);
     else if (std.length === av.length) sub.push(`${stdTag} ${t('all')}`);
     else sub.push(grp(stdTag, std.map(L)));
@@ -97,7 +100,7 @@
     rows.sort((a, b) => (b.sel - a.sel) || (anyAv(b) - anyAv(a)) || (minP(a) - minP(b)) || String(a.colorName).localeCompare(b.colorName));
     const priceCell = (r) => '<td>' + sites.map((s) => {
       const l = res[s] === null ? null : (r.per[s] || []);
-      const lab = `<span class="blpab-site">${s}</span>`;
+      const lab = `<span class="blpab-site">${t('siteShort_' + s)}</span>`;
       if (l === null) return `<div class="blpab-cell blpab-na">${lab}${t('notSynced')}</div>`;
       if (!l.length) return `<div class="blpab-cell blpab-na">${lab}—</div>`;
       return l.map((e) => `<div class="blpab-cell${e.available ? '' : ' blpab-cell-oos'}">${lab}${priceLink(e)} ${chTag(e)}${limTag(e)}</div>`).join('');
@@ -106,7 +109,7 @@
     const body = rows.map((r) => {
       const eids = [...new Set(sites.flatMap((s) => (r.per[s] || []).map((e) => e.eid)))];
       return `<tr class="${r.sel ? 'blpab-sel' : ''}${anyAv(r) ? '' : ' blpab-row-oos'}">
-        <td class="blpab-color"><div class="blpab-cw">${swatch(r.lego)}<span><b>${esc(r.bl ? r.bl.name : r.colorName)}</b><small>${blLabel(r.bl, r.lego, r.colorName)}</small><small>LEGO ${esc(r.colorName)}${BLPAB_GDS[r.lego] ? ` · GDS ${BLPAB_GDS[r.lego][0]} ${esc(BLPAB_GDS[r.lego][1])}` : ''} · Element ${eids.join(', ')}</small></span></div></td>
+        <td class="blpab-color"><div class="blpab-cw">${swatch(r.lego)}<span><b>${esc(r.bl ? r.bl.name : r.colorName)}</b><small>${blLabel(r.bl, r.lego, r.colorName)}</small><small>LEGO ${esc(r.colorName)}${BLPAB_GDS[r.lego] ? ` · GDS ${BLPAB_GDS[r.lego][0]} ${esc(BLPAB_GDS[r.lego][1])}` : ''} · ${t('elementLabel')} ${eids.join(', ')}</small></span></div></td>
         ${priceCell(r)}</tr>`;
     }).join('');
     return { html: `<table class="blpab-table"><thead>${head}</thead><tbody>${body}</tbody></table>`, rows };
@@ -195,22 +198,25 @@
     const min = vals.length > 1 ? Math.min(...vals) : null;
     const tag = (k) => min != null && usd[k] === min ? ` <span class="blpab-tag blpab-cheap">${t('cheapest')}</span>` : '';
     const cls = (k) => min != null && usd[k] === min ? ' class="blpab-best"' : '';
-    // 每列只有兩欄「網站｜價格」，出貨／限購／匯率放在價格下方小字（面板窄也不用橫向捲動）
-    const row = (key, label, priceHtml, sub) => `<tr${cls(key)}><th>${label}</th><td><div class="blpab-num">${priceHtml}${tag(key)}</div>${sub ? `<div class="blpab-sub2">${sub}</div>` : ''}</td></tr>`;
+    // 每列一行「網站｜價格」；出貨、熱銷／一般、匯率說明放在滑鼠提示，只有低限購（<50）才顯示在旁邊
+    const row = (key, label, priceHtml, side, tip) => `<tr${cls(key)}${tip ? ` title="${esc(tip)}"` : ''}><th>${label}</th><td><div class="blpab-num">${side ? `<span class="blpab-side">${side}</span>` : ''}${priceHtml}${tag(key)}</div></td></tr>`;
     const pabRow = (site, e, label) => {
       if (!BLPAB.sites().includes(site)) return '';
-      if (res[site] === null) return row(site, label, `<span class="blpab-na">${t('notSynced')}</span>`, '');
-      if (!e) return row(site, label, '<span class="blpab-na">—</span>', `<span class="blpab-muted">${t('noColour')}</span>`);
-      const ship = !e.available ? '' : e.channel === 'B' ? t('shipStd') : t(site === 'US' ? 'shipUS' : 'shipNL');
-      const fx = site === 'NL' && nlUsd != null ? `<div class="blpab-muted" title="${esc(t('fxTip', { date: BLPAB.fx.date }))}">${esc(t('fxNote', { usd: '$' + nlUsd.toFixed(2), rate: BLPAB.fx.rate.toFixed(3) }))}</div>` : '';
-      return row(site, label, priceLink(e), `${fx}${chTag(e)}${limTag(e)} <span class="blpab-muted">${ship}</span>`);
+      if (res[site] === null) return row(site, label, `<span class="blpab-na">${t('notSynced')}</span>`);
+      if (!e) return row(site, label, `<span class="blpab-na">${t('noColour')}</span>`);
+      if (!e.available) return row(site, label, `<span class="blpab-na"><s>${esc(BLPAB.money(e.price, e.currency))}</s> ${t('outOfStock')}</span>`);
+      const ship = e.channel === 'B' ? `${t('chStandard')}：${t('shipStd')}` : `${t('chBestseller')}：${t(site === 'US' ? 'shipUS' : 'shipNL')}`;
+      const fxTip = site === 'NL' && nlUsd != null ? '\n' + t('fxTip', { date: BLPAB.fx.date }) + `（1€ = $${BLPAB.fx.rate.toFixed(3)}）` : '';
+      const lim = e.maxQty ? '\n' + t('tipLimit', { n: e.maxQty }) : '';
+      const side = [site === 'NL' && nlUsd != null ? `≈$${nlUsd.toFixed(2)}` : '', e.maxQty && e.maxQty < 50 ? limTag(e) : ''].filter(Boolean).join(' ');
+      return row(site, label, priceLink(e), side, ship + lim + fxTip);
     };
     let blRow;
-    if (!pg) blRow = row('BL', t('srcBL'), `<span class="blpab-na">${t('pgWait')}</span>`, '');
-    else if (!bl) blRow = row('BL', t('srcBL'), `<span class="blpab-na">${t('pgNA')}</span>`, '');
-    else if (!blOk) blRow = row('BL', t('srcBL'), '<span class="blpab-na">—</span>', `<span class="blpab-bad">${esc(t('pgNotUsd', { cur: bl.cur }))}</span>`);
-    else blRow = row('BL', t('srcBL'), `<b>${pg.stockNew ? `${pg.stockNew.approx ? '~' : ''}$${pg.stockNew.v.toFixed(4)}` : '—'}</b>`,
-      pg.soldNew ? `<span class="blpab-muted">${esc(t('soldNote', { p: '$' + pg.soldNew.v.toFixed(4) }))}</span>` : '');
+    if (!pg) blRow = row('BL', t('srcBL'), `<span class="blpab-na">${t('pgWait')}</span>`);
+    else if (!bl) blRow = row('BL', t('srcBL'), `<span class="blpab-na">${t('pgNA')}</span>`);
+    else if (!blOk) blRow = row('BL', t('srcBL'), `<span class="blpab-bad">${esc(t('pgNotUsd', { cur: bl.cur }))}</span>`);
+    else blRow = row('BL', t('srcBL'), `<b>${pg.stockNew ? `${pg.stockNew.approx ? '~' : ''}$${pg.stockNew.v.toFixed(4)}` : '—'}</b>`, '',
+      pg.soldNew ? t('soldNote', { p: '$' + pg.soldNew.v.toFixed(4) }) : '');
     const table = `<table class="blpab-cmp">${pabRow('US', us, t('srcUS'))}${pabRow('NL', nl, t('srcNL'))}${blRow}</table>`;
     // 結論：PAB 美國站 vs BrickLink 現貨 New
     let verdict = '', verdictText = '', shortVerdict = '';
@@ -226,7 +232,7 @@
     }
     const eids = [...new Set(sel.flatMap((r) => BLPAB.sites().flatMap((s) => (r.per[s] || []).map((e) => e.eid))))];
     const site0 = us ? 'US' : 'NL', e0 = us || nl;
-    const links = eids.length ? `<div class="blpab-eids">Element ${eids.join(', ')}${e0 ? ` · <a href="${BLPAB.pabUrl(site0, e0.eid)}" target="_blank" rel="noopener">${t('openLego')}</a>` : ''}</div>` : '';
+    const links = eids.length ? `<div class="blpab-eids">${t('elementLabel')} ${eids.join(', ')}${e0 ? ` · <a href="${BLPAB.pabUrl(site0, e0.eid)}" target="_blank" rel="noopener">${t('openLego')}</a>` : ''}</div>` : '';
     return { html: verdict + table + `<small class="blpab-muted">${t('verdictBasis')}</small>` + links, verdictText: shortVerdict };
   }
 
@@ -248,40 +254,53 @@
       if (act === 'sync') blpabApi.runtime.sendMessage({ type: 'sync' }).catch(() => {});
       if (act === 'expand') { expanded = !expanded; renderPanel(); }
     });
+    // 拖曳：真的移動超過 4px 才算拖曳、才記位置（單純點標題列不會改位置）
     panel.addEventListener('mousedown', (ev) => {
       const head = ev.target.closest('.blpab-head');
       if (!head || ev.target.closest('button')) return;
-      const r = panel.getBoundingClientRect(), dx = ev.clientX - r.left, dy = ev.clientY - r.top;
-      const move = (e) => placePanel(e.clientX - dx, e.clientY - dy);
-      const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up);
-        const rr = panel.getBoundingClientRect(); ls.set('pos2', Math.round(rr.left) + ',' + Math.round(rr.top)); };
+      const r0 = panel.getBoundingClientRect(), sx = ev.clientX, sy = ev.clientY;
+      let moved = false;
+      const move = (e) => {
+        if (!moved && Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) < 4) return;
+        moved = true;
+        setPosFromRect(r0.left + e.clientX - sx, r0.top + e.clientY - sy, r0.width, panel.getBoundingClientRect().height);
+      };
+      const up = () => {
+        document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up);
+        if (moved) ls.set('pos3', JSON.stringify(pos));
+      };
       document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
       ev.preventDefault();
     });
     window.addEventListener('resize', clampPanel);
   }
-  function placePanel(x, y) {
-    panel.style.left = x + 'px'; panel.style.top = y + 'px'; panel.style.right = 'auto'; panel.style.bottom = 'auto';
-    clampPanel();
-  }
-  // 讓面板永遠留在視窗內，底部狀態列看得到
-  function clampPanel() {
-    if (!panel) return;
-    const pos = (ls.get('pos2') || '').split(',').map(Number);
-    if (!panel.style.left && pos.length === 2 && pos.every((n) => n >= 0)) { panel.style.left = pos[0] + 'px'; panel.style.top = pos[1] + 'px'; panel.style.right = 'auto'; panel.style.bottom = 'auto'; }
-    const r = panel.getBoundingClientRect();
+
+  // 面板位置一律「靠右」＋「靠下或靠上」：在畫面下半部就靠下（往上長），上半部就靠上（往下長）
+  // 預設：右下角，離邊 16px
+  let pos = (() => { try { const p = JSON.parse(ls.get('pos3') || 'null'); if (p && p.a && p.r >= 0 && p.v >= 0) return p; } catch (e) {} return { r: 16, v: 16, a: 'b' }; })();
+  const viewport = () => {
     // 可視範圍（扣掉捲軸）；BrickLink 舊頁面是 quirks mode，要改用 body 的寬度
     const root = document.compatMode === 'BackCompat' ? document.body : document.documentElement;
-    const vw = Math.min(window.innerWidth, root.clientWidth || window.innerWidth), vh = window.innerHeight;
-    let x = r.left, y = r.top;
-    if (panel.style.left) {
-      x = Math.max(4, Math.min(x, vw - Math.min(r.width, vw - 8) - 4));
-      y = Math.max(4, Math.min(y, vh - Math.min(r.height, 320) - 12));   // 拖太低時往上推，至少留 320px 可看
-      panel.style.left = x + 'px'; panel.style.top = y + 'px';
-    }
-    if (!panel.style.left && r.right > vw - 4) panel.style.right = (window.innerWidth - vw + 8) + 'px';   // 預設靠右時避開捲軸
-    // 預設停在右下角（往上長）；拖過之後才用 top/left
-    panel.style.maxHeight = (panel.style.left ? Math.max(160, vh - y - 16) : vh - 32) + 'px';
+    return { vw: Math.min(window.innerWidth, root.clientWidth || window.innerWidth), vh: window.innerHeight };
+  };
+  function setPosFromRect(left, top, w, h) {
+    const { vh } = viewport();
+    const right = window.innerWidth - (left + w);
+    pos = top + h / 2 > vh / 2 ? { r: right, v: vh - (top + h), a: 'b' } : { r: right, v: top, a: 't' };
+    clampPanel();
+  }
+  function clampPanel() {
+    if (!panel) return;
+    const { vw, vh } = viewport();
+    const sb = window.innerWidth - vw;                          // 捲軸寬度
+    const w = panel.getBoundingClientRect().width;
+    pos.r = Math.max(sb + 4, Math.min(pos.r, window.innerWidth - Math.min(w, vw - 8) - 4));
+    pos.v = Math.max(4, Math.min(pos.v, vh - 60));
+    panel.style.left = 'auto';
+    panel.style.right = pos.r + 'px';
+    if (pos.a === 'b') { panel.style.bottom = pos.v + 'px'; panel.style.top = 'auto'; }
+    else { panel.style.top = pos.v + 'px'; panel.style.bottom = 'auto'; }
+    panel.style.maxHeight = Math.max(120, vh - pos.v - 16) + 'px';
   }
 
   // 「設定對照」：在面板裡選 BrickLink 顏色（或輸入編號），不用瀏覽器原生輸入框
@@ -295,14 +314,20 @@
     const lego = link.dataset.lego, name = link.dataset.name;
     const box = document.createElement('span');
     box.className = 'blpab-mapedit';
+    const st = BLPAB.blColors ? t('blListOk', { n: BLPAB.blColors.list.length }) : BLPAB.blColorsStatus && !BLPAB.blColorsStatus.ok ? t('blListFail', { e: BLPAB.blColorsStatus.reason }) : t('blListNone');
     box.innerHTML = `<input type="search" class="blpab-mapsearch" placeholder="${esc(t('mapSearch'))}"><select><option value="">${esc(t('mapPick'))}</option>${blColourOptions().map(([id, n]) => `<option value="${id}">${esc(n)} (${id})</option>`).join('')}</select>
-      <input type="number" min="1" placeholder="${esc(t('mapOther'))}"> <button type="button" data-m="save">${t('mapSave')}</button> <button type="button" data-m="cancel">${t('mapCancel')}</button>`;
+      <span class="blpab-maprow"><input type="number" min="1" placeholder="${esc(t('mapOther'))}"><button type="button" data-m="save">${t('mapSave')}</button><button type="button" data-m="cancel">${t('mapCancel')}</button></span>
+      <small class="blpab-muted blpab-mapstatus">${esc(st)}</small>`;
     link.replaceWith(box);
     const sel = box.querySelector('select'), inp = box.querySelector('input[type=number]'), q = box.querySelector('.blpab-mapsearch');
     sel.addEventListener('change', () => { if (sel.value) inp.value = sel.value; });
     q.addEventListener('input', () => {   // 輸入字或編號篩選選單
       const k = q.value.trim().toLowerCase();
-      for (const o of sel.options) if (o.value) o.hidden = !!k && !o.textContent.toLowerCase().includes(k);
+      const shown = [];
+      for (const o of sel.options) if (o.value) { o.hidden = !!k && !o.textContent.toLowerCase().includes(k); if (!o.hidden) shown.push(o); }
+      // 只剩一個結果就直接選好；多個就清空選擇並顯示筆數
+      if (k && shown.length === 1) { sel.value = shown[0].value; inp.value = shown[0].value; }
+      else { sel.value = ''; sel.options[0].textContent = k ? `${t('mapPick')}（${shown.length}）` : t('mapPick'); }
     });
     q.focus();
     box.addEventListener('click', async (ev) => {
@@ -416,7 +441,7 @@
     if (!any) return { text: t('chipNone'), cls: 'blpab-chip-none', title: t('chipTipNone'), state: 'none' };
     if (!short.length) return { text: pre + t('chipOos'), cls: 'blpab-chip-oos', title: viaTip + lines.join('\n'), state: 'oos' };
     const first = short[0];
-    const text = pre + (first.s === sites[0] ? '' : first.s + ' ') + first.text;
+    const text = pre + (first.s === sites[0] ? '' : t('siteShort_' + first.s) + ' ') + first.text;
     return { text, cls: res.via.length && res.viaGuess ? 'blpab-chip-via' : '', title: viaTip + lines.join('\n') + '\n' + t('chipClick'), state: 'ok' };
   }
 
@@ -517,14 +542,23 @@
     const hideChips = chips.filter((c) => c.dataset.state !== 'ok');
     const keepChips = chips.filter((c) => c.dataset.state === 'ok');
     // 每個要藏的零件：先記下位置，再一起藏（visibility 不會改變版面）
+    // 往上找「只包含這一個零件標籤」的最外層 <tr> 或 <td>：
+    //  清單檢視 → 整列 <tr>；縮圖檢視 → 外層格子 <td>（裡面的小表格有圖片列和文字列）
+    const itemBox = (chip) => {
+      let best = null;
+      for (let el = chip.parentElement; el && el !== document.body; el = el.parentElement) {
+        if (el.querySelectorAll('.blpab-chip').length > 1) break;
+        if (el.tagName === 'TR' || el.tagName === 'TD') best = el;
+      }
+      return best;
+    };
     const plans = hideChips.map((chip) => {
-      const tr = chip.closest('tr');
-      const chipsInRow = tr ? tr.querySelectorAll('.blpab-chip').length : 0;
-      if (tr && chipsInRow === 1) return { mode: 'row', tr };          // 清單檢視：整列
-      const td = chip.closest('td') || chip.parentElement;
-      return { mode: 'cell', td, rect: td.getBoundingClientRect() };  // 縮圖檢視：這一格＋上方的縮圖
+      const box = itemBox(chip);
+      if (box && box.tagName === 'TR') return { mode: 'row', tr: box };
+      const td = box || chip.closest('td') || chip.parentElement;
+      return { mode: 'cell', td, rect: td.getBoundingClientRect() };
     });
-    const keepRects = keepChips.map((c) => (c.closest('td') || c.parentElement).getBoundingClientRect());
+    const keepRects = keepChips.map((c) => (itemBox(c) || c.closest('td') || c.parentElement).getBoundingClientRect());
     const imgs = [...document.querySelectorAll('img')].filter((im) => !im.closest('#blpab-panel, .blpab-pop, #blpab-filter'))
       .map((im) => ({ im, r: im.getBoundingClientRect() })).filter((x) => x.r.width > 8 && x.r.height > 8);
     const overlapsX = (r, c) => Math.min(r.right, c.right) - Math.max(r.left, c.left) > Math.min(r.width, c.width) * 0.5;

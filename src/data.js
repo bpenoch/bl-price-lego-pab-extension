@@ -11,13 +11,14 @@ const BLPAB = {
   settings: null, data: {}, state: {}, maps: null, blColors: null,
 
   async load() {
-    const keys = ['settings', 'syncState', 'blColors', 'altNos', 'fx', ...BLPAB_SITES.map((s) => 'pab_' + s)];
+    const keys = ['settings', 'syncState', 'blColors', 'blColorsStatus', 'altNos', 'fx', ...BLPAB_SITES.map((s) => 'pab_' + s)];
     const r = await blpabApi.storage.local.get(keys);
     this.settings = Object.assign({ sites: { US: true, NL: true }, ttlHours: 24, autoSync: true, colorOverrides: {}, aliases: {}, lang: 'auto' }, r.settings || {});
     blpabSetLang(this.settings.lang);
     this.settings.sites = Object.assign({ US: true, NL: true }, this.settings.sites || {});
     this.state = r.syncState || {};
     this.blColors = r.blColors || null;
+    this.blColorsStatus = r.blColorsStatus || null;
     this.altNos = r.altNos || {};
     this.fx = r.fx || null;   // BrickLink 零件頁上讀到的 Alternate Item No（記住給清單頁用）
     this.data = {};

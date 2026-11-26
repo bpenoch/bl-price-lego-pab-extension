@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "__MSG_name__",
   "short_name": "BL PAB",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "__MSG_description__",
   "permissions": [
     "storage",

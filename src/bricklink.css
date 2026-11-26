@@ -105,3 +105,21 @@ table.blpab-cmp .blpab-num a.blpab-price { font-weight: 800; }
 table.blpab-cmp .blpab-sub2 { text-align: right; font-size: 10.5px; line-height: 1.35; margin-top: 2px; color: #475467; }
 table.blpab-cmp .blpab-sub2 .blpab-tag { margin-left: 2px; }
 .blpab-mapsearch { width: 120px; font-size: 11px; }
+
+/* v1.5 */
+#blpab-panel.blpab-min .blpab-title { overflow: visible; }
+table.blpab-cmp th, table.blpab-cmp td { vertical-align: middle; }
+.blpab-side { font-size: 11px; font-weight: 500; color: #667085; margin-right: 6px; }
+.blpab-side .blpab-tag { font-size: 10px; }
+.blpab-chip { margin-left: 8px; }
+.blpab-mapedit { display: flex; flex-direction: column; align-items: stretch; gap: 4px; width: 100%; max-width: 100%; box-sizing: border-box; }
+.blpab-mapedit select, .blpab-mapedit .blpab-mapsearch { width: 100%; max-width: 100%; box-sizing: border-box; }
+.blpab-maprow { display: flex; gap: 4px; }
+.blpab-maprow input { flex: 1 1 auto; min-width: 0; width: auto; }
+.blpab-mapstatus { font-size: 10px; line-height: 1.3; }
+.blpab-table td.blpab-color { min-width: 0; }
+table.blpab-cmp { table-layout: fixed; }
+table.blpab-cmp th { width: 44%; white-space: normal; }
+table.blpab-cmp .blpab-num { white-space: normal; line-height: 1.25; }
+table.blpab-cmp .blpab-num .blpab-price, table.blpab-cmp .blpab-num b { white-space: nowrap; }
+.blpab-cheap { font-size: 9px; padding: 0 4px; margin-left: 3px; vertical-align: 2px; }
