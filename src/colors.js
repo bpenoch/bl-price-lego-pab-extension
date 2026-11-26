@@ -15,6 +15,7 @@ const BLPAB_COLOR_TABLE = [
   [29, 37, 'Medium Green', '#73DCA1'],
   [37, 36, 'Bright Green', '#4B9F4A'],
   [38, 68, 'Dark Orange', '#A95500'],
+  [107, 39, 'Dark Turquoise', '#008F9B'],
   [45, 62, 'Light Blue', '#B4D2E3'],
   [102, 42, 'Medium Blue', '#5A93DB'],
   [104, 24, 'Purple', '#81007B'],
@@ -69,6 +70,7 @@ const BLPAB_COLOR_TABLE = [
   [316, 77, 'Pearl Dark Gray', '#575857'],
 ];
 
+// 沒列在表上的顏色：用 LEGO 名稱比對 BrickLink 顏色表（BrickLink 新顏色多半直接沿用 LEGO 名稱，例如 Reddish Orange、Warm Tan）
 // 正規化名稱，用來比對 LEGO 與 BrickLink 顏色名稱
 function blpabNorm(s) {
   return String(s || '').toLowerCase().replace(/transparent|tr\.\s*/g, 'trans-').replace(/gr[ae]y/g, 'gray').replace(/[^a-z]/g, '');

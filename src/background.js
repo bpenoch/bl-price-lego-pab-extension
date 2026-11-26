@@ -1,12 +1,18 @@
-// 背景程式：排程同步 lego.com PAB 資料（在背景開一個 lego.com 分頁、讓 lego.js 抓完後關掉）。
+// 背景程式：同步 lego.com PAB 資料。
+// 1. 先試「直接連線」（不開分頁）；
+// 2. 失敗就在背景開一個 lego.com 分頁，由 lego.js 在頁面裡抓，抓完自動關閉；
+// 3. 分頁模式失敗（例如分頁被關掉、逾時）會自動再試一次。
+importScripts('pab-fetch.js');
 const api = globalThis.browser || globalThis.chrome;
 
 const SITE_URL = {
   US: 'https://www.lego.com/en-us/pick-and-build/pick-a-brick',
   NL: 'https://www.lego.com/nl-nl/pick-and-build/pick-a-brick',
 };
+const GQL_URL = 'https://www.lego.com/api/graphql/PickABrickQuery';
 const DEFAULT_SETTINGS = { sites: { US: true, NL: true }, ttlHours: 24, autoSync: true, colorOverrides: {}, aliases: {} };
 const TAB_TIMEOUT_MS = 4 * 60 * 1000;
+const TAB_ATTEMPTS = 2;
 
 async function getSettings() {
   const { settings } = await api.storage.local.get('settings');
@@ -28,26 +34,42 @@ function enqueue(site) {
 }
 
 async function runSite(site) {
-  await setSiteState(site, { status: 'running', done: 0, total: 0, error: null, started: Date.now() });
+  await setSiteState(site, { status: 'running', done: 0, total: 0, error: null, started: Date.now(), attempt: 0 });
+  // 1. 直接連線
+  try {
+    const data = await blpabFetchSite(site, GQL_URL, (done, total) => setSiteState(site, { done, total }), 1);
+    if (!data.count) throw new Error('沒有資料');
+    await api.storage.local.set({ ['pab_' + site]: data });
+    await setSiteState(site, { status: 'ok', error: null, count: data.count, available: data.available, currency: data.currency, ts: Date.now(), mode: 'direct' });
+    return;
+  } catch (e) { /* 改用分頁模式 */ }
+  // 2. 分頁模式（含自動重試）
+  let result;
+  for (let attempt = 1; attempt <= TAB_ATTEMPTS; attempt++) {
+    await setSiteState(site, { status: 'running', done: 0, total: 0, started: Date.now(), attempt });
+    result = await runTab(site);
+    if (!result.error) break;
+  }
+  if (result.error) await setSiteState(site, { status: 'error', error: result.error });
+  else await setSiteState(site, { status: 'ok', error: null, count: result.count, available: result.available, currency: result.currency, ts: Date.now(), mode: 'tab' });
+}
+
+const waiters = {};
+async function runTab(site) {
   const tab = await api.tabs.create({ url: SITE_URL[site], active: false });
   const jobs = await getJobs(); jobs[tab.id] = site; await setJobs(jobs);
-  // 等這一站完成（syncDone）或逾時
-  await new Promise((resolve) => {
-    const timer = setTimeout(async () => {
-      await finish(tab.id, site, { error: '逾時：lego.com 分頁沒有在 4 分鐘內完成（可能被要求驗證或選擇國家，請手動開一次 lego.com 再重試）' });
-      resolve();
-    }, TAB_TIMEOUT_MS);
-    waiters[tab.id] = () => { clearTimeout(timer); resolve(); };
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => finish(tab.id, { error: '逾時：lego.com 分頁 4 分鐘內沒有完成（可能要求驗證或選擇國家；請手動開一次 lego.com 後按 ⟳）' }), TAB_TIMEOUT_MS);
+    waiters[tab.id] = (r) => { clearTimeout(timer); resolve(r); };
   });
 }
-const waiters = {};
 
-async function finish(tabId, site, result) {
-  const jobs = await getJobs(); delete jobs[tabId]; await setJobs(jobs);
-  if (result.error) await setSiteState(site, { status: 'error', error: result.error });
-  else await setSiteState(site, { status: 'ok', error: null, count: result.count, available: result.available, currency: result.currency, ts: Date.now() });
+async function finish(tabId, result) {
+  const jobs = await getJobs();
+  if (!jobs[tabId]) return;
+  delete jobs[tabId]; await setJobs(jobs);
   try { await api.tabs.remove(tabId); } catch (e) {}
-  if (waiters[tabId]) { waiters[tabId](); delete waiters[tabId]; }
+  if (waiters[tabId]) { waiters[tabId](result); delete waiters[tabId]; }
 }
 
 async function isRunning(site) {
@@ -83,17 +105,17 @@ api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         await setSiteState(msg.site, { status: 'running', done: msg.done, total: msg.total });
         return true;
       case 'syncDone':
-        if (sender.tab) await finish(sender.tab.id, msg.site, msg);
+        if (sender.tab) await finish(sender.tab.id, msg);
         return true;
       case 'sync': {
         const settings = await getSettings();
-        const sites = msg.sites || Object.keys(settings.sites).filter(s => settings.sites[s]);
+        const sites = msg.sites || Object.keys(settings.sites).filter((s) => settings.sites[s]);
         return { started: await syncSites(sites, true) };
       }
       case 'ensureFresh': {
         const settings = await getSettings();
         if (!settings.autoSync) return { started: [] };
-        return { started: await syncSites(Object.keys(settings.sites).filter(s => settings.sites[s]), false) };
+        return { started: await syncSites(Object.keys(settings.sites).filter((s) => settings.sites[s]), false) };
       }
       default:
         return undefined;
@@ -102,8 +124,8 @@ api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   return true;
 });
 
-// 使用者自己把同步分頁關掉
+// 同步分頁被關掉（使用者或其他工具關的）→ 這次失敗，runSite 會自動再試一次
 api.tabs.onRemoved.addListener(async (tabId) => {
   const jobs = await getJobs();
-  if (jobs[tabId]) await finish(tabId, jobs[tabId], { error: '同步分頁被關閉' });
+  if (jobs[tabId]) await finish(tabId, { error: '同步用的 lego.com 分頁被關閉了（請不要關掉自動開啟的 lego.com 分頁），按 ⟳ 重試' });
 });

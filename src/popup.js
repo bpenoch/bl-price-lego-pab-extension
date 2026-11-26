@@ -20,7 +20,7 @@ async function render() {
     const d = r['pab_' + s], x = st[s] || {};
     let t;
     if (x.status === 'running') t = `同步中 ${x.total ? Math.round(100 * x.done / x.total) + '%' : '…'}`;
-    else if (d) t = `${new Date(d.ts).toLocaleString()}<br>${d.count.toLocaleString()} 筆，可購買 ${d.available.toLocaleString()}（${d.currency}）`;
+    else if (d) t = `${new Date(d.ts).toLocaleString()}${x.mode === 'direct' ? '（直接連線）' : x.mode === 'tab' ? '（分頁模式）' : ''}<br>${d.count.toLocaleString()} 筆，可購買 ${d.available.toLocaleString()}（${d.currency}）<br>有限購數量的 ${d.withMax == null ? '—' : d.withMax.toLocaleString()} 筆`;
     else t = '尚未同步';
     if (x.status === 'error') t += `<br><span class="err">上次失敗：${x.error}</span>`;
     return `<div class="site"><b>${LABEL[s]}</b><span class="st">${t}</span></div>`;
