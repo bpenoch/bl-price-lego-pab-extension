@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "BrickLink × LEGO PAB 價格",
+  "short_name": "BL PAB",
+  "version": "1.0.0",
+  "description": "在 BrickLink 零件頁與分類清單上，顯示 LEGO.com Pick a Brick 各顏色的價格（USD／EUR）、庫存、出貨類型與限購數量。",
+  "permissions": ["storage", "tabs"],
+  "host_permissions": ["https://www.bricklink.com/*", "https://www.lego.com/*"],
+  "background": { "service_worker": "src/background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://www.bricklink.com/*"],
+      "js": ["src/colors.js", "src/data.js", "src/bricklink.js"],
+      "css": ["src/bricklink.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.lego.com/*/pick-and-build/pick-a-brick*"],
+      "js": ["src/lego.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup.html",
+    "default_title": "BrickLink × LEGO PAB 價格",
+    "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+  },
+  "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+}
