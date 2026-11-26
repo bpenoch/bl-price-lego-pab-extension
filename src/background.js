@@ -19,30 +19,35 @@ async function getSettings() {
   return { ...DEFAULT_SETTINGS, ...(settings || {}), sites: { ...DEFAULT_SETTINGS.sites, ...((settings || {}).sites || {}) } };
 }
 async function getState() { return (await api.storage.local.get('syncState')).syncState || {}; }
-async function setSiteState(site, patch) {
-  const s = await getState();
-  s[site] = { ...(s[site] || {}), ...patch, updated: Date.now() };
-  await api.storage.local.set({ syncState: s });
+// 所有狀態寫入排隊執行，避免兩站同時同步時互相覆蓋（例如進度更新蓋掉「完成」）
+let stateLock = Promise.resolve();
+function setSiteState(site, patch) {
+  stateLock = stateLock.then(async () => {
+    const s = await getState();
+    s[site] = { ...(s[site] || {}), ...patch, updated: Date.now() };
+    await api.storage.local.set({ syncState: s });
+  }).catch(() => {});
+  return stateLock;
 }
 async function getJobs() { return (await api.storage.local.get('syncJobs')).syncJobs || {}; }
 async function setJobs(j) { await api.storage.local.set({ syncJobs: j }); }
 
-let queue = Promise.resolve();
-function enqueue(site) {
-  queue = queue.then(() => runSite(site)).catch(() => {});
-  return queue;
-}
+// 兩站同時同步（不再一站做完才做下一站）
+function startSite(site, allowTab) { runSite(site, allowTab).catch(() => {}); }
 
-async function runSite(site) {
+async function runSite(site, allowTab = true) {
   await setSiteState(site, { status: 'running', done: 0, total: 0, error: null, started: Date.now(), attempt: 0, mode: 'direct' });
   // 1. 直接連線
   try {
     const data = await blpabFetchSite(site, GQL_URL, (done, total) => setSiteState(site, { done, total }), 1);
+    await stateLock;
     if (!data.count) throw new Error('沒有資料');
     await api.storage.local.set({ ['pab_' + site]: data });
     await setSiteState(site, { status: 'ok', error: null, count: data.count, available: data.available, currency: data.currency, ts: Date.now(), mode: 'direct' });
     return;
-  } catch (e) { /* 改用分頁模式 */ }
+  } catch (e) {
+    if (!allowTab) { await setSiteState(site, { status: 'idle' }); return; }   // 背景排程只用直接連線，不自己開分頁
+  }
   // 2. 分頁模式（含自動重試）
   let result;
   for (let attempt = 1; attempt <= TAB_ATTEMPTS; attempt++) {
@@ -77,7 +82,7 @@ async function isRunning(site) {
   return s && s.status === 'running' && Date.now() - (s.started || 0) < TAB_TIMEOUT_MS + 10000;
 }
 
-async function syncSites(sites, force) {
+async function syncSites(sites, force, allowTab = true) {
   const settings = await getSettings();
   const started = [];
   for (const site of sites) {
@@ -89,7 +94,7 @@ async function syncSites(sites, force) {
       if (st && st.status === 'error' && Date.now() - (st.updated || 0) < 30 * 60e3) continue; // 失敗後 30 分鐘內不自動重試
     }
     started.push(site);
-    enqueue(site);
+    startSite(site, allowTab);
   }
   return started;
 }
@@ -113,6 +118,7 @@ api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         return { started: await syncSites(sites, true) };
       }
       case 'ensureFresh': {
+        updateFx();
         const settings = await getSettings();
         if (!settings.autoSync) return { started: [] };
         return { started: await syncSites(Object.keys(settings.sites).filter((s) => settings.sites[s]), false) };
@@ -128,4 +134,26 @@ api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 api.tabs.onRemoved.addListener(async (tabId) => {
   const jobs = await getJobs();
   if (jobs[tabId]) await finish(tabId, { error: 'tab_closed' });
+});
+
+// ---------- 歐元→美元匯率（歐洲央行，經 frankfurter.app；每天更新一次） ----------
+async function updateFx(force) {
+  const { fx } = await api.storage.local.get('fx');
+  if (!force && fx && Date.now() - fx.fetched < 20 * 3600e3) return;
+  try {
+    const r = await fetch('https://api.frankfurter.app/latest?from=EUR&to=USD');
+    const j = await r.json();
+    if (j && j.rates && j.rates.USD) await api.storage.local.set({ fx: { rate: j.rates.USD, date: j.date, fetched: Date.now() } });
+  } catch (e) { /* 沒有匯率就不顯示換算 */ }
+}
+
+// ---------- 背景定時更新：每 3 小時檢查一次，資料過期就用直接連線更新（不開分頁） ----------
+function ensureAlarm() { api.alarms.create('blpab-refresh', { periodInMinutes: 180, delayInMinutes: 1 }); }
+api.runtime.onInstalled.addListener(ensureAlarm);
+api.runtime.onStartup.addListener(ensureAlarm);
+api.alarms.onAlarm.addListener(async (a) => {
+  if (a.name !== 'blpab-refresh') return;
+  updateFx();
+  const settings = await getSettings();
+  if (settings.autoSync) syncSites(Object.keys(settings.sites).filter((s) => settings.sites[s]), false, false);
 });

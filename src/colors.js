@@ -49,6 +49,12 @@ const BLPAB_COLOR_TABLE = [
   [326, 158, 'Yellowish Green', '#DFEEA5'],
   [330, 155, 'Olive Green', '#9B9A5A'],
   [353, 220, 'Coral', '#FF698F'],
+  // 以下 5 色由 BrickLink catalogColors 頁面確認（v1.2 測試）
+  [402, 167, 'Reddish Orange', '#CA4C0B'],
+  [368, 236, 'Neon Yellow', '#FFF700'],
+  [430, 175, 'Warm Pink', '#F785B1'],
+  [371, 241, 'Medium Tan', '#CC9F6E'],
+  [431, 174, 'Blue Violet', '#4354A3'],
   [40, 12, 'Trans-Clear', '#EEEEEE'],
   [41, 17, 'Trans-Red', '#C91A09'],
   [42, 15, 'Trans-Light Blue', '#AEEFEC'],

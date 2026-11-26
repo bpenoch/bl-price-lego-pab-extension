@@ -11,14 +11,15 @@ const BLPAB = {
   settings: null, data: {}, state: {}, maps: null, blColors: null,
 
   async load() {
-    const keys = ['settings', 'syncState', 'blColors', 'altNos', ...BLPAB_SITES.map((s) => 'pab_' + s)];
+    const keys = ['settings', 'syncState', 'blColors', 'altNos', 'fx', ...BLPAB_SITES.map((s) => 'pab_' + s)];
     const r = await blpabApi.storage.local.get(keys);
     this.settings = Object.assign({ sites: { US: true, NL: true }, ttlHours: 24, autoSync: true, colorOverrides: {}, aliases: {}, lang: 'auto' }, r.settings || {});
     blpabSetLang(this.settings.lang);
     this.settings.sites = Object.assign({ US: true, NL: true }, this.settings.sites || {});
     this.state = r.syncState || {};
     this.blColors = r.blColors || null;
-    this.altNos = r.altNos || {};   // BrickLink 零件頁上讀到的 Alternate Item No（記住給清單頁用）
+    this.altNos = r.altNos || {};
+    this.fx = r.fx || null;   // BrickLink 零件頁上讀到的 Alternate Item No（記住給清單頁用）
     this.data = {};
     for (const s of BLPAB_SITES) if (r['pab_' + s]) this.data[s] = r['pab_' + s];
     this.maps = blpabBuildColorMaps(this.settings.colorOverrides);
@@ -36,6 +37,7 @@ const BLPAB = {
   // BrickLink 顏色名稱（優先用從 BrickLink 讀到的顏色表）
   blColorName(id) {
     if (this.blColors) { const c = this.blColors.list.find((x) => x[0] === id); if (c) return c[1]; }
+    const u = (this.settings.colorNames || {})[id]; if (u) return u;
     const t = Object.values(this.maps.legoToBl).find((b) => b.id === id);
     return t ? t.name : null;
   },
@@ -49,45 +51,60 @@ const BLPAB = {
     return null;
   },
 
-  // 回傳要找的 LEGO Design ID；known = 已知對照（內建或使用者設定），其餘是去掉字尾的推測
-  designCandidates(blNo) {
+  // 依序嘗試的 LEGO Design ID 層級：
+  //  1. 使用者自訂對照＋BrickLink 編號本身
+  //  2. 已知對照：零件頁的 Alternate Item No、內建對照（藍色提示）
+  //  3. 去掉字尾的推測，例如 3069a → 3069（黃色警告）
+  // 前一層在任一站找得到就停，不再合併後面的（避免 3069 混進 Alternate 的印刷件）
+  designTiers(blNo) {
     const no = String(blNo).trim();
     const user = (this.settings.aliases || {})[no];
-    const known = [].concat(user ? String(user).split(/[,\s]+/) : [], BLPAB_BUILTIN_ALIASES[no] || [], this.altNos[no] || []).filter(Boolean);
-    const list = [...known, no];
+    const userList = user ? String(user).split(/[,\s]+/).filter(Boolean) : [];
+    const known = [].concat(BLPAB_BUILTIN_ALIASES[no] || [], this.altNos[no] || []).filter(Boolean);
     const stripped = no.replace(/[a-z]+$/i, '');
-    if (stripped && stripped !== no) list.push(stripped);
-    const out = [...new Set(list)];
-    out.known = new Set(known);
+    return [
+      { ids: [...new Set([...userList, no])], kind: userList.length ? 'known' : 'exact' },
+      { ids: known, kind: 'known' },
+      { ids: stripped && stripped !== no ? [stripped] : [], kind: 'guess' },
+    ].filter((t) => t.ids.length);
+  },
+  designCandidates(blNo) { return [...new Set(this.designTiers(blNo).flatMap((t) => t.ids))]; },
+
+  // 回傳 { site: [element...] }，site 沒有資料時為 null；via = 實際用到、和 BL 編號不同的 LEGO Design ID
+  lookup(blNo) {
+    const out = {};
+    const sites = this.sites();
+    for (const s of sites) out[s] = this.data[s] ? [] : null;
+    out.via = []; out.viaGuess = false; out.no = String(blNo);
+    for (const tier of this.designTiers(blNo)) {
+      let found = false;
+      for (const site of sites) {
+        const d = this.data[site];
+        if (!d) continue;
+        const seen = new Set(out[site].map((e) => e.eid));
+        for (const dsg of tier.ids) {
+          const g = d.d[dsg];
+          if (!g) continue;
+          found = true;
+          if (dsg !== String(blNo) && !out.via.includes(dsg)) out.via.push(dsg);
+          for (const [eid, ck, cents, av, ch, mq, nm] of g.e) {
+            if (seen.has(eid)) continue; seen.add(eid);
+            const col = d.colors[ck] || ['', ''];
+            out[site].push({ eid, site, design: dsg, lego: ck, colorName: col[0], family: col[1], price: cents == null ? null : cents / 100,
+              available: !!av, channel: ch, maxQty: mq, name: nm || g.n, bl: this.blFor(ck, col[0]), currency: d.currency });
+          }
+        }
+      }
+      if (found) { out.viaGuess = tier.kind === 'guess'; break; }
+    }
     return out;
   },
 
-  // 回傳 { site: [element...] }，site 沒有資料時為 null；via = 實際對到的 LEGO Design ID 與 BL 編號不同時
-  lookup(blNo) {
-    const out = {};
-    const cands = this.designCandidates(blNo);
-    const via = new Set(); let viaGuess = false;
-    for (const site of this.sites()) {
-      const d = this.data[site];
-      if (!d) { out[site] = null; continue; }
-      const seen = new Set(), list = [];
-      for (const dsg of cands) {
-        const g = d.d[dsg];
-        if (!g) continue;
-        if (dsg !== String(blNo)) { via.add(dsg); if (!cands.known.has(dsg)) viaGuess = true; }
-        for (const [eid, ck, cents, av, ch, mq, nm] of g.e) {
-          if (seen.has(eid)) continue; seen.add(eid);
-          const col = d.colors[ck] || ['', ''];
-          list.push({ eid, site, design: dsg, lego: ck, colorName: col[0], family: col[1], price: cents == null ? null : cents / 100,
-            available: !!av, channel: ch, maxQty: mq, name: nm || g.n, bl: this.blFor(ck, col[0]), currency: d.currency });
-        }
-      }
-      out[site] = list;
-    }
-    out.via = [...via];
-    out.viaGuess = viaGuess;   // true = 去掉字尾推測的（黃色警告）；false = 已知對照（藍色提示）
-    return out;
-  },
+  // 顯示用的顏色名稱：優先用 BrickLink 名稱
+  colourLabel(e) { return (e.bl && e.bl.name) || e.colorName; },
+
+  // 荷蘭站歐元換美元（參考用；匯率來自歐洲央行，每天更新）
+  toUsd(eur) { return this.fx && this.fx.rate ? eur * this.fx.rate : null; },
 
   // 記住 BrickLink 零件頁的 Alternate Item No（例如 3006 → 92538）
   async rememberAlternates(no, alts) {
