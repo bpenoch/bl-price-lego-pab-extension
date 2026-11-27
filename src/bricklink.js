@@ -38,7 +38,7 @@
     const hex = BLPAB.maps.hex[lego];
     return `<span class="blpab-sw" style="${hex ? 'background:' + hex : ''}"></span>`;
   }
-  const blLabel = (bl, lego, name) => bl ? `BrickLink ${bl.id}${bl.guessed ? t('guessed') : ''}`
+  const blLabel = (bl, lego, name) => bl ? `BrickLink ${bl.id}${bl.guessed ? t('guessed') : ''}${bl.tc ? t('toConfirm') : ''}`
     : `${esc(t('blNoMap', { lego }))} <a href="#" class="blpab-setmap" data-lego="${lego}" data-name="${esc(name)}">${t('setMap')}</a>`;
 
   // ---------- 每站一行摘要（依價格分組） ----------
@@ -78,7 +78,7 @@
       const tag = `<span class="blpab-tag ${limCls(q)}">${t('limit', { n: q })}</span>`;
       sub.push(lim.size === 1 && ns.length === av.length ? `${tag} ${t('all')}` : grp(tag, ns));
     }
-    if (oos.length) sub.push(`<span class="blpab-bad">${t('oosCount', { n: oos.length })}</span> ${names(oos.map(L), 3)}`);
+    if (oos.length) sub.push(`<span class="blpab-bad">${t('oosCount', { n: oos.length })}</span>${BLPAB_LANG === 'zh' ? '' : ' '}${names(oos.map(L), 3)}`);
     return `<div class="blpab-line">${head}${C()}${txt}<div class="blpab-sub">${sub.join('<span class="blpab-dot">·</span>')}</div></div>`;
   }
 
@@ -311,8 +311,10 @@
 
   // 「設定對照」：在面板裡選 BrickLink 顏色（或輸入編號），不用瀏覽器原生輸入框
   function blColourOptions() {
-    const list = BLPAB.blColors ? BLPAB.blColors.list
-      : BLPAB_COLOR_TABLE.map((r) => [r[1], r[2]]).concat(Object.entries(BLPAB.settings.colorNames || {}).map(([id, n]) => [Number(id), n]));
+    const list = (BLPAB.blColors ? BLPAB.blColors.list : [])
+      .concat(Object.entries(BLPAB.learned || {}).map(([id, n]) => [Number(id), n]))
+      .concat(BLPAB_COLOR_TABLE.map((r) => [r[1], r[2]]))
+      .concat(Object.entries(BLPAB.settings.colorNames || {}).map(([id, n]) => [Number(id), n]));
     const seen = new Set();
     return list.filter(([id]) => !seen.has(id) && seen.add(id)).sort((a, b) => String(a[1]).localeCompare(b[1]));
   }
@@ -320,10 +322,12 @@
     const lego = link.dataset.lego, name = link.dataset.name;
     const box = document.createElement('span');
     box.className = 'blpab-mapedit';
-    const st = BLPAB.blColors ? t('blListOk', { n: BLPAB.blColors.list.length }) : BLPAB.blColorsStatus && !BLPAB.blColorsStatus.ok ? t('blListFail', { e: String(BLPAB.blColorsStatus.reason).replace(/Failed to fetch/g, t('netErr')) }) : t('blListNone');
+    const nLearned = Object.keys(BLPAB.learned || {}).length;
+    const st = BLPAB.blColors ? t('blListOk', { n: BLPAB.blColors.list.length }) : t('blListLearned', { n: blColourOptions().length, m: nLearned });
+    const stTip = BLPAB.blColorsStatus && !BLPAB.blColorsStatus.ok ? String(BLPAB.blColorsStatus.reason) : '';
     box.innerHTML = `<input type="search" class="blpab-mapsearch" placeholder="${esc(t('mapSearch'))}"><select><option value="">${esc(t('mapPick'))}</option>${blColourOptions().map(([id, n]) => `<option value="${id}">${esc(n)} (${id})</option>`).join('')}</select>
       <span class="blpab-maprow"><input type="number" min="1" placeholder="${esc(t('mapOther'))}"><button type="button" data-m="save">${t('mapSave')}</button><button type="button" data-m="cancel">${t('mapCancel')}</button></span>
-      <small class="blpab-muted blpab-mapstatus">${esc(st)}${BLPAB.blColors ? '' : ` <a href="#" data-m="reload">${t('retry')}</a>`}</small>`;
+      <small class="blpab-muted blpab-mapstatus" title="${esc(stTip)}">${esc(st)}</small>`;
     // 放在顏色表這一列下面，獨立一整列（不擠在顏色名那欄，不會出現橫向捲軸）
     const tr = link.closest('tr');
     let holder = null;
@@ -664,7 +668,7 @@
   async function ensureBlColors(force) {
     const st = (await blpabApi.storage.local.get('blColorsStatus')).blColorsStatus;
     if (!force && BLPAB.blColors && Date.now() - BLPAB.blColors.ts < 30 * 864e5) return;
-    if (!force && st && !st.ok && Date.now() - st.ts < 6 * 3600e3) return;   // 失敗後 6 小時內不自動重試
+    if (!force && st && !st.ok && Date.now() - st.ts < 7 * 864e5) return;   // 失敗後 7 天內不自動重試（改用零件頁學到的顏色）
     const reasons = [];
     for (const url of ['https://www.bricklink.com/catalogColors.asp', 'https://www.bricklink.com/catalogColors.asp?sortBy=I', 'https://v2.bricklink.com/en-us/catalog/color-guide']) {
       const r = await blpabApi.runtime.sendMessage({ type: 'fetchText', url }).catch((e) => ({ error: String(e) }));
@@ -677,6 +681,57 @@
     await blpabApi.storage.local.set({ blColorsStatus: { ts: Date.now(), ok: false, reason: reasons.join(' ｜ ') } });
   }
 
+  // ---------- 從 BrickLink 零件頁學顏色 ----------
+  // BrickLink 的顏色表頁面（新版 color-guide）是用 JavaScript 畫的，抓 HTML 拿不到顏色；
+  // 但零件頁的顏色選單、Color Info 分頁都帶有「名稱＋編號」，看一頁學一頁，存起來給「設定對照」和名稱比對用。
+  let learnTimer;
+  function learnColours() {
+    const found = {};
+    // 排除 BrickLink 介面文字（例如「Items For Sale (125)」「Price Guide」）
+    const UI = /sale|item|lots?\b|price|wanted|store|collection|minifig|\bparts?\b|\bsets?\b|image|view|guide|show|\ball\b|year|weight|catalog|inventory|color info|known|appears|consists|select/i;
+    const add = (id, name) => {
+      id = Number(id); name = String(name || '').replace(/\s+/g, ' ').trim();
+      if (id > 0 && id < 400 && name.length > 1 && name.length < 45 && /[A-Za-z]/.test(name) && !/^\d/.test(name) && !UI.test(name)) found[id] = name;
+    };
+    for (const el of document.querySelectorAll('option, li, span, div, td, a')) {
+      if (el.closest('#blpab-panel, .blpab-pop, #blpab-filter')) continue;
+      const txt = (el.textContent || '').trim();
+      if (!txt || txt.length > 60) continue;
+      // 1. 明確標示顏色編號的屬性
+      const attrId = el.getAttribute('data-color-id') || el.getAttribute('data-colorid') || el.getAttribute('data-idcolor') || el.getAttribute('data-color');
+      if (attrId && /^\d{1,3}$/.test(attrId)) add(attrId, txt);
+      // 2. 下拉選單 <option value="233">Satin Trans-Bright Green</option>
+      if (el.tagName === 'OPTION' && /^\d{1,3}$/.test(el.value)) add(el.value, txt);
+      // 3. 文字是「Satin Trans-Bright Green (233)」
+      if (el.children.length === 0) { const m = /^(.{2,44}?)\s*\((\d{1,3})\)$/.exec(txt); if (m) add(m[2], m[1]); }
+    }
+    const n = Object.keys(found).length;
+    if (n < 2) return;
+    const merged = Object.assign({}, BLPAB.learned, found);
+    if (Object.keys(merged).length === Object.keys(BLPAB.learned || {}).length && Object.keys(found).every((k) => BLPAB.learned[k] === found[k])) return;
+    BLPAB.learned = merged;
+    blpabApi.storage.local.set({ blColorsLearned: merged }).catch(() => {});
+  }
+  function scheduleLearn() { clearTimeout(learnTimer); learnTimer = setTimeout(learnColours, 600); }
+
+  // ---------- 立即出現的提示框（取代瀏覽器原生 title，要停 1 秒才出現） ----------
+  let tipEl;
+  document.addEventListener('mouseover', (ev) => {
+    const el = ev.target.closest && ev.target.closest('#blpab-panel [title], .blpab-pop [title], .blpab-chip[title], #blpab-panel [data-blpab-tip], .blpab-pop [data-blpab-tip], .blpab-chip[data-blpab-tip]');
+    if (!el) { if (tipEl) tipEl.style.display = 'none'; return; }
+    if (el.hasAttribute('title')) { el.dataset.blpabTip = el.getAttribute('title'); el.removeAttribute('title'); }
+    const text = el.dataset.blpabTip;
+    if (!text) return;
+    if (!tipEl) { tipEl = document.createElement('div'); tipEl.className = 'blpab-tip'; document.body.appendChild(tipEl); }
+    tipEl.textContent = text;
+    tipEl.style.display = 'block';
+    const r = el.getBoundingClientRect(), w = tipEl.offsetWidth, h = tipEl.offsetHeight;
+    const left = Math.max(6, Math.min(r.left, window.innerWidth - w - 6));
+    const top = r.top - h - 6 > 4 ? r.top - h - 6 : r.bottom + 6;
+    tipEl.style.left = left + 'px'; tipEl.style.top = top + 'px';
+  }, true);
+  document.addEventListener('scroll', () => { if (tipEl) tipEl.style.display = 'none'; }, true);
+
   // ---------- 啟動 ----------
   function renderAll() { renderPanel(); annotateLinks(document); }
 
@@ -684,11 +739,12 @@
     await BLPAB.load();
     renderAll();
     ensureBlColors();
+    if (itemPageInfo()) { scheduleLearn(); document.addEventListener('click', () => setTimeout(scheduleLearn, 300), true); }
     if (BLPAB.sites().some((s) => BLPAB.stale(s))) blpabApi.runtime.sendMessage({ type: 'ensureFresh' }).catch(() => {});
     let timer;
     blpabApi.storage.onChanged.addListener((ch, area) => {
       if (area !== 'local') return;
-      if (!Object.keys(ch).some((k) => k === 'settings' || k === 'syncState' || k === 'blColors' || k === 'altNos' || k.startsWith('pab_'))) return;
+      if (!Object.keys(ch).some((k) => k === 'settings' || k === 'syncState' || k === 'blColors' || k === 'blColorsLearned' || k === 'altNos' || k.startsWith('pab_'))) return;
       clearTimeout(timer);
       timer = setTimeout(async () => { await BLPAB.load(); renderAll(); }, 300);
     });

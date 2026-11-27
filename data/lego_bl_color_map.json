@@ -1,0 +1,305 @@
+{
+ "_note": "LEGO color ID -> BrickLink color ID. status: confirmed / to_confirm. Sources: GDS STD color list (2022-10-04) + bricksbulk.com/pages/color (2026-11-26) + manual additions.",
+ "map": {
+  "1": {
+   "bl": 1,
+   "name": "White",
+   "status": "confirmed"
+  },
+  "5": {
+   "bl": 2,
+   "name": "Tan",
+   "status": "confirmed"
+  },
+  "18": {
+   "bl": 28,
+   "name": "Nougat",
+   "status": "confirmed"
+  },
+  "21": {
+   "bl": 5,
+   "name": "Red",
+   "status": "confirmed"
+  },
+  "23": {
+   "bl": 7,
+   "name": "Blue",
+   "status": "confirmed"
+  },
+  "24": {
+   "bl": 3,
+   "name": "Yellow",
+   "status": "confirmed"
+  },
+  "26": {
+   "bl": 11,
+   "name": "Black",
+   "status": "confirmed"
+  },
+  "28": {
+   "bl": 6,
+   "name": "Green",
+   "status": "confirmed"
+  },
+  "37": {
+   "bl": 36,
+   "name": "Bright Green",
+   "status": "confirmed"
+  },
+  "38": {
+   "bl": 68,
+   "name": "Dark Orange",
+   "status": "confirmed"
+  },
+  "40": {
+   "bl": 12,
+   "name": "Trans-Clear",
+   "status": "confirmed"
+  },
+  "41": {
+   "bl": 17,
+   "name": "Trans-Red",
+   "status": "confirmed"
+  },
+  "42": {
+   "bl": 15,
+   "name": "Trans-Light Blue",
+   "status": "confirmed"
+  },
+  "43": {
+   "bl": 14,
+   "name": "Trans-Dark Blue",
+   "status": "confirmed"
+  },
+  "44": {
+   "bl": 19,
+   "name": "Trans-Yellow",
+   "status": "confirmed"
+  },
+  "48": {
+   "bl": 20,
+   "name": "Trans-Green",
+   "status": "confirmed"
+  },
+  "49": {
+   "bl": 16,
+   "name": "Trans-Neon Green",
+   "status": "confirmed"
+  },
+  "102": {
+   "bl": 42,
+   "name": "Medium Blue",
+   "status": "confirmed"
+  },
+  "106": {
+   "bl": 4,
+   "name": "Orange",
+   "status": "confirmed"
+  },
+  "107": {
+   "bl": 39,
+   "name": "Dark Turquoise",
+   "status": "confirmed"
+  },
+  "111": {
+   "bl": 13,
+   "name": "Trans-Black",
+   "status": "confirmed"
+  },
+  "113": {
+   "bl": 50,
+   "name": "Trans-Dark Pink",
+   "status": "confirmed"
+  },
+  "119": {
+   "bl": 34,
+   "name": "Lime",
+   "status": "confirmed"
+  },
+  "124": {
+   "bl": 71,
+   "name": "Magenta",
+   "status": "confirmed"
+  },
+  "126": {
+   "bl": 51,
+   "name": "Trans-Purple",
+   "status": "confirmed"
+  },
+  "135": {
+   "bl": 55,
+   "name": "Sand Blue",
+   "status": "confirmed"
+  },
+  "138": {
+   "bl": 69,
+   "name": "Dark Tan",
+   "status": "confirmed"
+  },
+  "140": {
+   "bl": 63,
+   "name": "Dark Blue",
+   "status": "confirmed"
+  },
+  "141": {
+   "bl": 80,
+   "name": "Dark Green",
+   "status": "confirmed"
+  },
+  "151": {
+   "bl": 48,
+   "name": "Sand Green",
+   "status": "confirmed"
+  },
+  "154": {
+   "bl": 59,
+   "name": "Dark Red",
+   "status": "confirmed"
+  },
+  "182": {
+   "bl": 98,
+   "name": "Trans-Orange",
+   "status": "confirmed"
+  },
+  "191": {
+   "bl": 110,
+   "name": "Bright Light Orange",
+   "status": "confirmed"
+  },
+  "192": {
+   "bl": 88,
+   "name": "Reddish Brown",
+   "status": "confirmed"
+  },
+  "194": {
+   "bl": 86,
+   "name": "Light Bluish Gray",
+   "status": "confirmed"
+  },
+  "199": {
+   "bl": 85,
+   "name": "Dark Bluish Gray",
+   "status": "confirmed"
+  },
+  "212": {
+   "bl": 105,
+   "name": "Bright Light Blue",
+   "status": "confirmed"
+  },
+  "221": {
+   "bl": 47,
+   "name": "Dark Pink",
+   "status": "confirmed"
+  },
+  "222": {
+   "bl": 104,
+   "name": "Bright Pink",
+   "status": "confirmed"
+  },
+  "226": {
+   "bl": 103,
+   "name": "Bright Light Yellow",
+   "status": "confirmed"
+  },
+  "268": {
+   "bl": 89,
+   "name": "Dark Purple",
+   "status": "confirmed"
+  },
+  "283": {
+   "bl": 90,
+   "name": "Light Nougat",
+   "status": "confirmed"
+  },
+  "297": {
+   "bl": 115,
+   "name": "Pearl Gold",
+   "status": "confirmed"
+  },
+  "308": {
+   "bl": 120,
+   "name": "Dark Brown",
+   "status": "confirmed"
+  },
+  "312": {
+   "bl": 150,
+   "name": "Medium Nougat",
+   "status": "confirmed"
+  },
+  "315": {
+   "bl": 95,
+   "name": "Flat Silver",
+   "status": "confirmed"
+  },
+  "321": {
+   "bl": 153,
+   "name": "Dark Azure",
+   "status": "confirmed"
+  },
+  "322": {
+   "bl": 156,
+   "name": "Medium Azure",
+   "status": "confirmed"
+  },
+  "323": {
+   "bl": 152,
+   "name": "Light Aqua",
+   "status": "confirmed"
+  },
+  "324": {
+   "bl": 157,
+   "name": "Medium Lavender",
+   "status": "confirmed"
+  },
+  "325": {
+   "bl": 154,
+   "name": "Lavender",
+   "status": "confirmed"
+  },
+  "326": {
+   "bl": 158,
+   "name": "Yellowish Green",
+   "status": "confirmed"
+  },
+  "330": {
+   "bl": 155,
+   "name": "Olive Green",
+   "status": "confirmed"
+  },
+  "353": {
+   "bl": 220,
+   "name": "Coral",
+   "status": "confirmed"
+  },
+  "129": {
+   "bl": 102,
+   "name": "Glitter Trans-Purple",
+   "status": "confirmed"
+  },
+  "336": {
+   "bl": 67,
+   "name": "Metallic Silver",
+   "status": "confirmed"
+  },
+  "362": {
+   "bl": 223,
+   "name": "Satin Trans-Light Blue",
+   "status": "to_confirm"
+  },
+  "365": {
+   "bl": 230,
+   "name": "Satin Trans-Purple",
+   "status": "to_confirm"
+  },
+  "366": {
+   "bl": 232,
+   "name": "Satin Trans-Dark Blue",
+   "status": "confirmed"
+  },
+  "367": {
+   "bl": 233,
+   "name": "Satin Trans-Bright Green",
+   "status": "to_confirm"
+  }
+ }
+}

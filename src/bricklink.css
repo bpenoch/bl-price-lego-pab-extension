@@ -127,3 +127,6 @@ table.blpab-cmp .blpab-num .blpab-price, table.blpab-cmp .blpab-num b { white-sp
 /* v1.6 */
 tr.blpab-maptr td { background: #f8fafc; padding: 6px 8px; }
 .blpab-maprow button { white-space: nowrap; flex: 0 0 auto; }
+
+/* v1.7：立即出現的提示框 */
+.blpab-tip { position: fixed; z-index: 2147483647; display: none; max-width: 300px; padding: 6px 8px; border-radius: 6px; background: #1d2433; color: #fff; font: 11px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, "PingFang TC", sans-serif; white-space: pre-line; pointer-events: none; box-shadow: 0 4px 14px rgba(0,0,0,.25); }

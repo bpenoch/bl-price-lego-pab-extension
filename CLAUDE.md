@@ -16,5 +16,7 @@
 - 顏色名稱以 BrickLink 名稱為主，LEGO 色名放小字。
 - 介面有中文與英文（`src/i18n.js`），新增文字兩種語言都要加。中文版不要留英文術語：Bestseller→熱銷、Standard→一般、New→全新、Element→LEGO 件號、US/NL→美／荷（顏色名稱保留英文官方名）。
 - 顏色另外顯示 GDS（Gobricks）色號與中文名，資料在 `src/colors.js` 的 `BLPAB_GDS`（來源：使用者提供的 20240311_GDS_STD_color_list_total.xlsx）。
-- 讀 BrickLink 其他頁面（例如顏色表）時要經由背景程式（`fetchText` 訊息），網頁裡直接 fetch 遇到轉址到其他 BrickLink 子網域會「Failed to fetch」。
+- 讀 BrickLink 其他頁面時要經由背景程式（`fetchText` 訊息），網頁裡直接 fetch 遇到轉址到其他 BrickLink 子網域會「Failed to fetch」。
+- BrickLink 的顏色表頁面（`catalogColors.asp` 會轉到新版 color-guide）是 JavaScript 畫的，抓 HTML 拿不到顏色；改從零件頁的顏色選單學「名稱＋編號」（`blColorsLearned`）。
+- LEGO→BrickLink 顏色對照的主要來源是使用者提供的 `data/lego_bl_color_map.json`；`status: to_confirm` 的在 `colors.js` 第 5 欄標 true，介面顯示「（待確認）」。
 - 全程只讀：不加入購物車、不登入 lego.com。

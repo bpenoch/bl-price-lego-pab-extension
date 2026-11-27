@@ -59,6 +59,10 @@ const BLPAB_COLOR_TABLE = [
   [129, 102, 'Glitter Trans-Purple', '#A5A5CB'],
   [366, 232, 'Satin Trans-Dark Blue', '#0020A0'],
   [336, 67, 'Metallic Silver', '#A5A9B4'],
+  // 以下來自使用者的 data/lego_bl_color_map.json，status = to_confirm（第 5 欄 true = 待確認）
+  [362, 223, 'Satin Trans-Light Blue', '#AEEFEC', true],
+  [365, 230, 'Satin Trans-Purple', '#A5A5CB', true],
+  [367, 233, 'Satin Trans-Bright Green', '#D9E4A7', true],
   [40, 12, 'Trans-Clear', '#EEEEEE'],
   [41, 17, 'Trans-Red', '#C91A09'],
   [42, 15, 'Trans-Light Blue', '#AEEFEC'],
@@ -93,8 +97,8 @@ function blpabBuildColorMaps(overrides) {
     const row = all.find(r => r[0] === Number(lego));
     if (row) row[1] = Number(bl); else all.push([Number(lego), Number(bl), '', '']);
   }
-  for (const [lego, bl, name, h] of all) {
-    legoToBl[lego] = { id: bl, name };
+  for (const [lego, bl, name, h, tc] of all) {
+    legoToBl[lego] = { id: bl, name, tc: !!tc };
     (blToLego[bl] = blToLego[bl] || []).push(lego);
     if (h) hex[lego] = h;
   }
