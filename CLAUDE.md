@@ -2,10 +2,14 @@
 
 這些是使用者（BRICKpromotions）確認過的方向，改版時要遵守。
 
+## 範圍
+
+- 擴充功能**只在 BrickLink 零件頁**出現（`catalogitem.page?P=…`、`catalogItem.asp?P=…`），由 manifest 的 matches 限制。分類清單頁（catalogList.asp）等其他頁面不顯示任何東西（2026-11-27 使用者決定：清單頁上不好用）。
+
 ## 面板的重點：哪個網站、多少錢
 
 - 面板最重要的資訊只有一件事：**哪個網站（PAB 美國站／PAB 荷蘭站／BrickLink）、多少錢**。價格和網站名稱要最醒目，一眼就能比。
-- 整個面板（零件頁浮動面板、清單頁彈出明細）**可以再窄一點**，不必為了放進次要資訊而加寬。版面空間不夠時，優先保留「網站＋價格」，其他資訊（出貨天數、限購、匯率說明、Element ID、比較基準說明等）縮小、換行或收進展開區。
+- 整個面板**可以再窄一點**，不必為了放進次要資訊而加寬。版面空間不夠時，優先保留「網站＋價格」，其他資訊（出貨天數、限購、匯率說明、Element ID、比較基準說明等）縮小、換行或收進展開區。
 - 零件頁面板**預設出現在右下角**，不要擋在畫面中間；使用者真的拖曳（移動超過 4px）之後才記住位置。位置以「靠左或靠右」＋「靠下或靠上」記錄（看面板停在畫面哪一半），所以收合／展開都從那個角落長出，不會跑到畫面中間或超出畫面。
 - 比價表每列一行「網站｜價格」；出貨天數、熱銷／一般、匯率說明放在滑鼠提示，只有低限購（<50）和荷蘭站換算美元顯示在價格旁邊。
 - 面板要回答的三件事：選的顏色 PAB 有沒有賣、對應 LEGO 哪個顏色、哪個價格最便宜。其他資訊預設收起來。
@@ -17,6 +21,6 @@
 - 介面有中文與英文（`src/i18n.js`），新增文字兩種語言都要加。中文版不要留英文術語：Bestseller→熱銷、Standard→一般、New→全新、Element→LEGO 件號、US/NL→美／荷（顏色名稱保留英文官方名）。
 - 顏色另外顯示 GDS（Gobricks）色號與中文名，資料在 `src/colors.js` 的 `BLPAB_GDS`（來源：使用者提供的 20240311_GDS_STD_color_list_total.xlsx）。
 - 讀 BrickLink 其他頁面時要經由背景程式（`fetchText` 訊息），網頁裡直接 fetch 遇到轉址到其他 BrickLink 子網域會「Failed to fetch」。
-- BrickLink 的顏色表頁面（`catalogColors.asp` 會轉到新版 color-guide）是 JavaScript 畫的，抓 HTML 拿不到顏色；改從零件頁的顏色選單學「名稱＋編號」（`blColorsLearned`）。
+- BrickLink 的顏色表頁面（`catalogColors.asp` 會轉到新版 color-guide）是 JavaScript 畫的，抓 HTML 拿不到顏色；改從零件頁的顏色選單學「名稱＋編號」（`blColorsLearned2`）。只讀 `#_idColorListAll` 這類顏色選單裡有 `data-color`、`data-name` 的項目，不要讀頁面上其他下拉選單（幣別、付款方式、排序會被誤學）。學到的名稱不能蓋掉內建名稱。
 - LEGO→BrickLink 顏色對照的主要來源是使用者提供的 `data/lego_bl_color_map.json`；`status: to_confirm` 的在 `colors.js` 第 5 欄標 true，介面顯示「（待確認）」。
 - 全程只讀：不加入購物車、不登入 lego.com。

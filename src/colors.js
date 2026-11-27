@@ -63,6 +63,8 @@ const BLPAB_COLOR_TABLE = [
   [362, 223, 'Satin Trans-Light Blue', '#AEEFEC', true],
   [365, 230, 'Satin Trans-Purple', '#A5A5CB', true],
   [367, 233, 'Satin Trans-Bright Green', '#D9E4A7', true],
+  // v1.7 測試：4073 的 LEGO #360 Transparent W/ Opalescence（待確認）
+  [360, 228, 'Satin Trans-Clear', '#F2F2F2', true],
   [40, 12, 'Trans-Clear', '#EEEEEE'],
   [41, 17, 'Trans-Red', '#C91A09'],
   [42, 15, 'Trans-Light Blue', '#AEEFEC'],

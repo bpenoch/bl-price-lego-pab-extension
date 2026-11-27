@@ -11,7 +11,7 @@ const BLPAB = {
   settings: null, data: {}, state: {}, maps: null, blColors: null,
 
   async load() {
-    const keys = ['settings', 'syncState', 'blColors', 'blColorsStatus', 'blColorsLearned', 'altNos', 'fx', ...BLPAB_SITES.map((s) => 'pab_' + s)];
+    const keys = ['settings', 'syncState', 'blColors', 'blColorsStatus', 'blColorsLearned2', 'altNos', 'fx', ...BLPAB_SITES.map((s) => 'pab_' + s)];
     const r = await blpabApi.storage.local.get(keys);
     this.settings = Object.assign({ sites: { US: true, NL: true }, ttlHours: 24, autoSync: true, colorOverrides: {}, aliases: {}, lang: 'auto' }, r.settings || {});
     blpabSetLang(this.settings.lang);
@@ -19,7 +19,7 @@ const BLPAB = {
     this.state = r.syncState || {};
     this.blColors = r.blColors || null;
     this.blColorsStatus = r.blColorsStatus || null;
-    this.learned = r.blColorsLearned || {};   // 從 BrickLink 零件頁顏色選單學到的 {編號: 名稱}
+    this.learned = r.blColorsLearned2 || {};   // 從 BrickLink 零件頁顏色選單學到的 {編號: 名稱}
     this.altNos = r.altNos || {};
     this.fx = r.fx || null;   // BrickLink 零件頁上讀到的 Alternate Item No（記住給清單頁用）
     this.data = {};
@@ -41,9 +41,9 @@ const BLPAB = {
   blColorName(id) {
     if (this.blColors) { const c = this.blColors.list.find((x) => x[0] === id); if (c) return c[1]; }
     const u = (this.settings.colorNames || {})[id]; if (u) return u;
-    if (this.learned[id]) return this.learned[id];
     const t = Object.values(this.maps.legoToBl).find((b) => b.id === id);
-    return t ? t.name : null;
+    if (t && t.name) return t.name;
+    return this.learned[id] || null;
   },
 
   // LEGO 顏色 → BrickLink 顏色：先查內建表／自訂，再用名稱比對 BrickLink 顏色表

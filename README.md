@@ -14,7 +14,7 @@ A Chrome/Safari extension that shows LEGO.com Pick a Brick prices, stock and ord
 | BrickLink 頁面 | 顯示 |
 |---|---|
 | 零件頁 `catalogitem.page?P=1751` | 右下角的浮動面板（可拖曳、可收合成一行）：①大字結論「PAB 便宜 34% → 建議去 PAB 買」②三列比價表，每列只有「網站｜價格」：PAB 美國站、PAB 荷蘭站（附換算美元）、BrickLink 現貨 New，最便宜的標綠；出貨、限購等放在價格下方小字 ③Element ID 與「在 lego.com 開啟」④「看其他 N 個顏色」展開完整表格（每次都先收起） |
-| 分類清單、搜尋結果 | 零件編號旁的價格標籤 `$0.58–0.70`（色數在提示框）。lego.com 找不到的零件會在背景查它的 Alternate Item No，滑鼠移上去看兩站，點一下展開明細；清單上方可勾「只看 lego.com PAB 有賣」 |
+| 分類清單、搜尋結果 | 不顯示（v1.8 起只在零件頁出現），滑鼠移上去看兩站，點一下展開明細；清單上方可勾「只看 lego.com PAB 有賣」 |
 
 - 價格可以點，會在 lego.com 用 Element ID 搜尋該零件
 - **Bestseller**（藍）：熱銷件，美國約 5、荷蘭約 8 個工作天；**Standard**（灰）：最長 28 個工作天（美國站自 2026-11 起暫停 Standard）
@@ -58,7 +58,7 @@ Xcode 開啟後按 ▶︎ Run → Safari「開發」選單勾「允許未簽署�
 | BrickLink page | What you see |
 |---|---|
 | Part page `catalogitem.page?P=1751` | A floating panel in the bottom-right corner that you can drag, or collapse to a one-line bar: ① a verdict in large type, e.g. "PAB is 34% cheaper → buy on PAB" ② a three-row price table (PAB US, PAB NL with a USD conversion, BrickLink for-sale New with last-6-months sold as a note), cheapest row in green ③ element IDs and "Open on lego.com" ④ "Show the other N colours" for the full table (always starts hidden) |
-| Category lists, search results | A price tag next to each part number, e.g. `$0.58–0.70` (colour count in the tooltip); parts not found on lego.com get their Alternate Item No looked up in the background; hover for both sites, click for every colour. A checkbox above the list shows only parts sold on PAB. |
+| Category lists, search results | Nothing (since v1.8 the extension only runs on part pages); hover for both sites, click for every colour. A checkbox above the list shows only parts sold on PAB. |
 
 - Prices are links that search lego.com for that element ID.
 - **Bestseller** (blue) ships in about 5 (US) / 8 (NL) business days; **Standard** (grey) in up to 28 (paused on the US site since Nov 2026).
