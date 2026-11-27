@@ -103,7 +103,7 @@
   },
   "111": {
    "bl": 13,
-   "name": "Trans-Black",
+   "name": "Trans-Brown",
    "status": "confirmed"
   },
   "113": {
@@ -299,6 +299,11 @@
   "367": {
    "bl": 233,
    "name": "Satin Trans-Bright Green",
+   "status": "to_confirm"
+  },
+  "375": {
+   "bl": 251,
+   "name": "Trans-Black",
    "status": "to_confirm"
   }
  }

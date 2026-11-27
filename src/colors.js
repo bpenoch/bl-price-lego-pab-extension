@@ -65,6 +65,8 @@ const BLPAB_COLOR_TABLE = [
   [367, 233, 'Satin Trans-Bright Green', '#D9E4A7', true],
   // v1.7 測試：4073 的 LEGO #360 Transparent W/ Opalescence（待確認）
   [360, 228, 'Satin Trans-Clear', '#F2F2F2', true],
+  // data/lego_bl_color_map.json 2026-11-27 更新（待確認）
+  [375, 251, 'Trans-Black', '#3A3A3A', true],
   [40, 12, 'Trans-Clear', '#EEEEEE'],
   [41, 17, 'Trans-Red', '#C91A09'],
   [42, 15, 'Trans-Light Blue', '#AEEFEC'],
@@ -73,7 +75,7 @@ const BLPAB_COLOR_TABLE = [
   [47, 18, 'Trans-Neon Orange', '#FF800D'],
   [48, 20, 'Trans-Green', '#84B68D'],
   [49, 16, 'Trans-Neon Green', '#F8F184'],
-  [111, 13, 'Trans-Black', '#635F52'],
+  [111, 13, 'Trans-Brown', '#635F52'],   // BrickLink 已把 13 改名為 Trans-Brown
   [113, 50, 'Trans-Dark Pink', '#DF6695'],
   [126, 51, 'Trans-Purple', '#A5A5CB'],
   [143, 74, 'Trans-Medium Blue', '#CFE2F7'],
